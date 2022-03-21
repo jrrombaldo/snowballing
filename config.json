@@ -1,0 +1,10 @@
+{
+    "tor": {
+        "proxy_ip": "localhost",
+        "health_check_host": "http://ifconfig.me/ip",
+        "hops":3
+
+    },
+    "other": {
+    }
+}
