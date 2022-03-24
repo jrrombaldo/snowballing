@@ -10,10 +10,19 @@ import os
 import threading
 import traceback
 
-logging.basicConfig(format="%(asctime)s %(levelname)-7s  %(threadName)-18s - %(message)s")
+
+
+log_format_str = "%(asctime)s %(levelname)-7s  %(threadName)-18s - %(message)s"
+logging.basicConfig(format=log_format_str)
+
 logging.getLogger().setLevel(logging.FATAL)  # disable imported module logs
-log = logging.getLogger("literature_review")
+
+log = logging.getLogger("scholar-semantic")
 log.setLevel(logging.DEBUG)
+
+log.addHandler(logging.FileHandler('scholar-semantic.log'))
+for log_handler in log.handlers:
+    log_handler.setFormatter(logging.Formatter(log_format_str))
 
 
 def get_internet_ip_addr(http_session):
@@ -137,7 +146,7 @@ class ScholarSemantic(object):
             )
 
         log.debug(
-            f" match {'FOUND' if paper_found else 'NOT FOUND'} within {resp.get('total')} result(s) for {nvivo_paper['primary_title']}"
+            f"match {'FOUND' if paper_found else 'NOT FOUND'} within {resp.get('total')} result(s) for {nvivo_paper['primary_title']}"
         )
 
         if paper_found:
@@ -161,10 +170,14 @@ def thread_task(paper):
 
 
 if __name__ == "__main__":
+
+    THREAD_POOL_SIZE = 25
     with open("empirical.ris", "r") as risFile:
         papers = rispy.load(risFile, skip_unknown_tags=False)
 
-        with ThreadPool(25) as thread_pool:
+        log.info(f"starting execution with {THREAD_POOL_SIZE} threads ...")
+
+        with ThreadPool(THREAD_POOL_SIZE) as thread_pool:
             thread_pool.map(thread_task, papers)
             thread_pool.join()
 
