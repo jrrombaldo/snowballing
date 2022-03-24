@@ -1,4 +1,5 @@
 from datetime import date
+import logging
 from pprint import pprint
 from time import sleep
 import rispy
@@ -16,10 +17,36 @@ papers_queue = queue.Queue()
 
 
 # class ScholaSemantic(object):
-#      def __init__(self):
+#      def __init__(self, http_session):
 #          self.sess = 
 
 
+
+
+
+
+
+
+
+
+def search_paper_from_site(title, year, authors):
+    fields = 'authors,paperId,externalIds,url,title,abstract,venue,year,referenceCount,citationCount,influentialCitationCount,isOpenAccess,fieldsOfStudy,s2FieldsOfStudy'
+    url = f'https://www.semanticscholar.org/api/1/search'
+    data = {
+           "queryString":title,
+           "page":1,
+           "pageSize":10,
+           "sort":"relevance",
+           "authors":authors,
+           "coAuthors":[],
+           "venues":[],
+        #    "yearFilter":year
+        }
+    headers = {"Content-Type": "application/json"}
+    resp = requests.post(url, json = data, headers=headers, proxies=proxies,  verify=False)
+    print (f'{resp.json().get("totalResults")}\t-\t{resp.status_code}\t-\t{title}')
+
+    return resp.json()
 
 
 
@@ -70,14 +97,14 @@ def find_match_within_search_results(nvivo_paper, scholar_papers):
     return None
 
 
-@retry(Exception, delay=10, tries=2 )
+@retry(Exception, delay=50, tries=5 )
 def search_for_paper_on_semanticscholar(nvivo_paper, session=None):
     print (f'searching for {nvivo_paper.get("primary_title")}')
     paper_found = None
 
     resp = search_paper_from_API(nvivo_paper["primary_title"], session)# " " + paper["year"] + " "+ " ".join(authors) )
 
-    # if resp.status_code == 429: raise Exception("429 - too many requests")
+    if resp.get("status_code") != 200: raise Exception(f"funny status code{resp.get('status_code')}")
 
     if resp.get("total") and resp.get("total") > 0: 
         paper_found = find_match_within_search_results(nvivo_paper, resp.get("data"))
@@ -114,7 +141,7 @@ with open('empirical.ris','r') as risFile:
   
     for paper in papers:
         print ("="*100)
-        sleep(50)
+        sleep(20)
         match = search_for_paper_on_semanticscholar(paper)
         
     #     papers_queue.put(paper)
@@ -128,3 +155,6 @@ with open('empirical.ris','r') as risFile:
 
 
 
+# threading, 
+# logging
+# read and write into nvivo csv
