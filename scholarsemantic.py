@@ -8,8 +8,9 @@ from torpy.http.requests import tor_requests_session
 import logging
 import os
 import threading
+import traceback
 
-logging.basicConfig(format="%(asctime)s %(levelname)s  %(threadName)-16s - %(message)s")
+logging.basicConfig(format="%(asctime)s %(levelname)-7s  %(threadName)-18s - %(message)s")
 logging.getLogger().setLevel(logging.FATAL)  # disable imported module logs
 log = logging.getLogger("literature_review")
 log.setLevel(logging.DEBUG)
@@ -148,11 +149,15 @@ class ScholarSemantic(object):
 
 
 def thread_task(paper):
-    with tor_requests_session() as tor_session:
-        threading.current_thread().name = get_internet_ip_addr(tor_session)
+    try:
+        with tor_requests_session() as tor_session:
+            threading.current_thread().name = get_internet_ip_addr(tor_session)
 
-        scholar = ScholarSemantic(tor_session)
-        scholar.search_for_paper_on_semanticscholar(paper)
+            scholar = ScholarSemantic(tor_session)
+            scholar.search_for_paper_on_semanticscholar(paper)
+    except Exception:
+        log.error(f'something went wrong with paper {paper}\n resulting at {traceback.format_exc()}')
+
 
 
 if __name__ == "__main__":
@@ -163,7 +168,3 @@ if __name__ == "__main__":
             thread_pool.map(thread_task, papers)
             thread_pool.join()
 
-
-# threading,
-# logging
-# read and write into nvivo csv
