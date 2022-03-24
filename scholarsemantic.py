@@ -1,6 +1,4 @@
-from datetime import date
-from pprint import pprint
-from time import sleep
+from concurrent.futures import process
 import rispy
 import requests
 import json
@@ -8,37 +6,31 @@ from retry import retry
 from multiprocessing.pool import ThreadPool
 from torpy.http.requests import tor_requests_session
 import logging
-import queue
 import os
+import threading
 
-
-logging.basicConfig(format="%(asctime)s  %(levelname)s  - %(message)s")
-logging.getLogger().setLevel(logging.WARN)  # disable imported module logs
+logging.basicConfig(format="%(asctime)s %(levelname)s  %(threadName)-16s - %(message)s")
+logging.getLogger().setLevel(logging.FATAL)  # disable imported module logs
 log = logging.getLogger("literature_review")
 log.setLevel(logging.DEBUG)
 
 
+def get_internet_ip_addr(http_session):
+    return http_session.get("http://ifconfig.me/ip").text
+
+
 class ScholarSemantic(object):
     def __init__(
-        self,
-        http_session=requests.Session(),
-        retry=True,
-        retry_delay=20,
-        retry_attempts=4,
-        proxies=None,
-        http_cert_validation=True,
+        self, http_session=requests.Session(), proxies=None, http_cert_validation=True
     ):
         self.http_session = http_session
-        self.retry = retry
-        self.retry_delay = retry_delay
-        self.retry_attempts = retry_attempts
         self.proxies = proxies
         self.http_cert_validation = http_cert_validation
         self.headers = {"Content-Type": "application/json"}
 
     def _search_paper_from_scholar_website(self, title, authors):
-        fields = "authors,paperId,externalIds,url,title,abstract,venue,year,referenceCount,citationCount,influentialCitationCount,isOpenAccess,fieldsOfStudy,s2FieldsOfStudy"
         url = f"https://www.semanticscholar.org/api/1/search"
+
         data = {
             "queryString": title,
             "page": 1,
@@ -57,7 +49,9 @@ class ScholarSemantic(object):
             proxies=self.proxies,
             verify=self.http_cert_validation,
         )
-        print(f'{resp.json().get("totalResults")}\t-\t{resp.status_code}\t-\t{title}')
+        log.debug(
+            f'results+found={resp.json().get("totalResults")}, http_status_code={resp.status_code}, {title}'
+        )
 
         ret = resp.json()
         ret["status_code"] = resp.status_code
@@ -74,7 +68,9 @@ class ScholarSemantic(object):
             verify=self.http_cert_validation,
             headers=self.headers,
         )
-        print(f'{resp.json().get("total")}\t-\t{resp.status_code}\t-\t{paper_details}')
+        log.debug(
+             f'results+found={resp.json().get("total")}, http_status_code={resp.status_code}, {paper_details}'
+        )
 
         ret = resp.json()
         ret["status_code"] = resp.status_code
@@ -123,15 +119,10 @@ class ScholarSemantic(object):
         with open(f"{self._result_directory()}/{paper_title}.json", "w") as file:
             file.write(json.dumps(paper_details_json, indent=4, sort_keys=True))
 
-    def _get_internet_ip_addr(self):
-        return self.http_session.get("http://ifconfig.me/ip", proxies=self.proxies).text
-
     @retry(Exception, delay=50, tries=5)
     def search_for_paper_on_semanticscholar(self, nvivo_paper):
         paper_found = None
-
-        internet_ip = self._get_internet_ip_addr()
-        print(f'using ip {internet_ip}to search for {nvivo_paper.get("primary_title")}')
+        log.info(f'searching {nvivo_paper.get("primary_title")}')
 
         resp = self._search_paper_from_scholar_API(nvivo_paper["primary_title"])
 
@@ -144,8 +135,8 @@ class ScholarSemantic(object):
                 nvivo_paper, resp.get("data")
             )
 
-        print(
-            f" {'found' if paper_found else 'NOT FOUND'} a match within {resp.get('total')} result(s)\n\t{nvivo_paper['primary_title']}\n"
+        log.debug(
+            f" match {'FOUND' if paper_found else 'NOT FOUND'} within {resp.get('total')} result(s) for {nvivo_paper['primary_title']}"
         )
 
         if paper_found:
@@ -156,37 +147,21 @@ class ScholarSemantic(object):
             )
 
 
-# def thread_task ():
-#     with tor_requests_session() as session:
-#         print (f"thread ready, internet ip = {session.get('http://ifconfig.me/ip').text}")
-#         while True:
-#             paper = papers_queue.get()
-#             # match = search_for_paper_on_semanticscholar(paper, session)
-#             papers_queue.task_done()
+def thread_task(paper):
+    with tor_requests_session() as tor_session:
+        threading.current_thread().name = get_internet_ip_addr(tor_session)
 
-# for x in range (1,50):
-#     threading.Thread(target=thread_task, daemon=True).start()
-
-
-papers_queue = queue.Queue()
-
-with open("empirical.ris", "r") as risFile:
-    papers = rispy.load(risFile, skip_unknown_tags=False)
-
-    for paper in papers:
-        print("=" * 100)
-        # sleep(10)
-        scholar = ScholarSemantic(requests.Session())
+        scholar = ScholarSemantic(tor_session)
         scholar.search_for_paper_on_semanticscholar(paper)
-        # match = search_for_paper_on_semanticscholar(paper)
-
-    #     papers_queue.put(paper)
-
-#     with ThreadPool(75) as pool:
-#         pool.map(search_for_paper_on_semanticscholar, papers)
 
 
-# papers_queue.join()
+if __name__ == "__main__":
+    with open("empirical.ris", "r") as risFile:
+        papers = rispy.load(risFile, skip_unknown_tags=False)
+
+        with ThreadPool(25) as thread_pool:
+            thread_pool.map(thread_task, papers)
+            thread_pool.join()
 
 
 # threading,
