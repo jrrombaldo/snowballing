@@ -9,8 +9,6 @@ import logging
 import os
 import threading
 import traceback
-from pprint import pprint
-
 
 log_format_str = "%(asctime)s %(levelname)-7s  %(threadName)-18s - %(message)s"
 logging.basicConfig(format=log_format_str)
@@ -38,7 +36,7 @@ class ScholarSemantic(object):
         self.http_cert_validation = http_cert_validation
 
     @retry(Exception, delay=60, tries=4)
-    def http_request(self, method, url, json_body=None):
+    def __http_request(self, method, url, json_body=None):
         # log.debug(f"executing HTTP {method} on {url} with body {json_body}")
 
         headers = {"Content-Type": "application/json"}
@@ -61,7 +59,7 @@ class ScholarSemantic(object):
         # log.debug(f"returned {json_return}")
         return json_return
 
-    def search_paper_from_scholar_website(self, nvivo_paper):
+    def _search_paper_from_scholar_website(self, nvivo_paper):
         scholar_website_url = f"https://www.semanticscholar.org/api/1/search"
 
         data = {
@@ -78,55 +76,76 @@ class ScholarSemantic(object):
             #    "yearFilter":year
         }
 
-        http_result = self.http_request("POST", scholar_website_url, data)
+        http_result = self.__http_request("POST", scholar_website_url, data)
+
 
         log.debug(
-            f"Results_found={http_result.get('totalResults')}, http_status_code={http_result.get('status_code')}, {nvivo_paper['primary_title']}"
+            f"[WEB]\tmatch {'FOUND' if http_result.get('totalResults') > 0 else 'NOT FOUND'} within {http_result.get('totalResults')} result(s) for {nvivo_paper['primary_title']}"
         )
 
-        # TODO search for matching among results
-        self._write_found_result("_" + nvivo_paper["primary_title"], http_result)
-        return http_result
+        if http_result.get('totalResults') and http_result.get('totalResults') > 0:
+            return http_result.get('results')[0].get('id')
+        else:
+            return None
 
-    def search_paper_from_scholar_API(self, nvivo_paper):
+    def _search_paper_from_scholar_API(self, nvivo_paper):
         returning_fields = "authors,paperId,externalIds,url,title,abstract,venue,year,referenceCount,citationCount,influentialCitationCount,isOpenAccess,fieldsOfStudy,s2FieldsOfStudy"
         scholar_url = f"https://api.semanticscholar.org/graph/v1/paper/search?query={nvivo_paper['primary_title']}&fields={returning_fields}&offset=0&limit=99"
 
-        result = self.http_request("GET", scholar_url)
+        result = self.__http_request("GET", scholar_url)
 
-        if not result.get("total") or result.get("total") < 1:
-            return None  # search returned no result
-
-        # checking for matches among returned papers
+       
         matched_paper = None
+        # checking for matches among returned papers
+        if result.get("total") and result.get("total") > 0:
+            nvivo_authors = self._extract_authors_surname_from_nvivo_authors(
+                nvivo_paper.get("first_authors")
+            )
 
-        nvivo_authors = self._extract_authors_surname_from_nvivo_authors(
-            nvivo_paper.get("first_authors")
-        )
-
-        for scholar_paper in result.get("data"):
-            # search for a papers (among result) tha that maches both title and authors
-            if scholar_paper.get("title").lower() == nvivo_paper.get(
-                "primary_title"
-            ).lower() and all(
-                nvivo_author.lower() in str(scholar_paper.get("authors")).lower()
-                for nvivo_author in nvivo_authors
-            ):
-                matched_paper = scholar_paper
-                break
+            for scholar_paper in result.get("data"):
+                # search for a papers (among result) tha that maches both title and authors
+                if scholar_paper.get("title").lower() == nvivo_paper.get(
+                    "primary_title"
+                ).lower() and all(
+                    nvivo_author.lower() in str(scholar_paper.get("authors")).lower()
+                    for nvivo_author in nvivo_authors
+                ):
+                    matched_paper = scholar_paper
+                    break
 
         log.debug(
-            f"match {'FOUND' if matched_paper else 'NOT FOUND'} within {result.get('total')} result(s) for {nvivo_paper['primary_title']}"
+            f"[API]\tmatch {'FOUND' if matched_paper else 'NOT FOUND'} within {result.get('total')} result(s) for {nvivo_paper['primary_title']}"
         )
 
         if matched_paper:
-            self._write_found_result(nvivo_paper["primary_title"], matched_paper)
-            return matched_paper
+            return matched_paper.get('paperId')
         else:
-            self._write_notfound_result(
-                result.get("status_code"), nvivo_paper["primary_title"]
-            )
             return None
+
+    def get_paper_details(self, scholar_paper_id, paper_title):
+        fields_to_return = 'paperId,externalIds,url,title,abstract,venue,year,referenceCount,citationCount,influentialCitationCount,isOpenAccess,fieldsOfStudy,s2FieldsOfStudy,authors,citations,references,embedding,tldr'
+        scholar_url = f"https://api.semanticscholar.org/graph/v1/paper/{scholar_paper_id}&fields={fields_to_return}"
+
+        return self.__http_request("GET", scholar_url)
+       
+
+
+    def search_scholar_by_nvivo_paper(self,nvivo_paper):
+        paper_id = paper_detail = None
+
+        paper_id = self._search_paper_from_scholar_API(nvivo_paper)
+        if not paper_id:
+            paper_id = self._search_paper_from_scholar_website(nvivo_paper)
+
+        if paper_id:
+            paper_detail = self._write_found_result(nvivo_paper.get("primary_title"), paper_id)
+        
+        if paper_id and paper_detail:
+            self._write_found_result(nvivo_paper.get("primary_title"), paper_detail)
+        else:
+            self._write_notfound_result(nvivo_paper.get("primary_title"))
+
+
 
     def _extract_author_name_from_fullname(self, author):
         if ", " in author:
@@ -143,13 +162,12 @@ class ScholarSemantic(object):
             os.makedirs(result_dir)
         return result_dir
 
-    def _write_notfound_result(self, status_code, paper_title):
+    def _write_notfound_result(self, paper_title):
         with open(f"{self._result_directory()}/not_found.txt", "a") as file:
-            file.write(f"{status_code} - {paper_title}")
-            file.write("\r\n")
+            file.write(f"{paper_title}\r\n")
 
     def _write_found_result(self, paper_title, paper_details_json):
-        with open(f"{self._result_directory()}/{paper_title}.json", "w") as file:
+        with open(f"{self._result_directory()}/{paper_title}.json", "a") as file:
             file.write(json.dumps(paper_details_json, indent=4, sort_keys=True))
 
 
@@ -158,8 +176,9 @@ def thread_task(paper):
         with tor_requests_session() as tor_session:
             threading.current_thread().name = get_internet_ip_addr(tor_session)
             scholar = ScholarSemantic(tor_session)
-            scholar.search_paper_from_scholar_API(paper)
-            scholar.search_paper_from_scholar_website(paper)
+            # scholar._search_paper_from_scholar_API(paper)
+            # scholar._search_paper_from_scholar_website(paper)
+            scholar.search_scholar_by_nvivo_paper(paper)
 
     except Exception:
         log.error(
@@ -181,7 +200,7 @@ if __name__ == "__main__":
     #     for paper in rispy.load(risFile, skip_unknown_tags=False):
     #         scholar = ScholarSemantic(requests.session())
     #         scholar.search_paper_from_scholar_API(paper)
-    #         # scholar.search_paper_from_scholar_website(paper)
+    #         scholar.search_paper_from_scholar_website(paper)
 
 
 """
