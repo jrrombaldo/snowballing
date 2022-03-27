@@ -51,7 +51,9 @@ class ScholarSemantic(object):
         )
 
         if http_reponse.status_code != 200:
-            raise Exception(f"funny status code{http_reponse.get('status_code')}")
+            raise Exception(
+                f"funny status code {http_reponse.status_code} for {method} {url}"
+            )
 
         json_return = http_reponse.json()
         json_return["status_code"] = http_reponse.status_code
@@ -78,13 +80,12 @@ class ScholarSemantic(object):
 
         http_result = self.__http_request("POST", scholar_website_url, data)
 
-
         log.debug(
             f"[WEB]\tmatch {'FOUND' if http_result.get('totalResults') > 0 else 'NOT FOUND'} within {http_result.get('totalResults')} result(s) for {nvivo_paper['primary_title']}"
         )
 
-        if http_result.get('totalResults') and http_result.get('totalResults') > 0:
-            return http_result.get('results')[0].get('id')
+        if http_result.get("totalResults") and http_result.get("totalResults") > 0:
+            return http_result.get("results")[0].get("id")
         else:
             return None
 
@@ -94,7 +95,6 @@ class ScholarSemantic(object):
 
         result = self.__http_request("GET", scholar_url)
 
-       
         matched_paper = None
         # checking for matches among returned papers
         if result.get("total") and result.get("total") > 0:
@@ -118,19 +118,16 @@ class ScholarSemantic(object):
         )
 
         if matched_paper:
-            return matched_paper.get('paperId')
+            return matched_paper.get("paperId")
         else:
             return None
 
-    def get_paper_details(self, scholar_paper_id, paper_title):
-        fields_to_return = 'paperId,externalIds,url,title,abstract,venue,year,referenceCount,citationCount,influentialCitationCount,isOpenAccess,fieldsOfStudy,s2FieldsOfStudy,authors,citations,references,embedding,tldr'
-        scholar_url = f"https://api.semanticscholar.org/graph/v1/paper/{scholar_paper_id}&fields={fields_to_return}"
-
+    def get_paper_details(self, scholar_paper_id):
+        fields_to_return = "paperId,externalIds,url,title,abstract,venue,year,referenceCount,citationCount,influentialCitationCount,isOpenAccess,fieldsOfStudy,s2FieldsOfStudy,authors.authorId,authors.name,authors.aliases,authors.paperCount,authors.citationCount,authors.homepage,citations.paperId,citations.externalIds,citations.url,citations.title,citations.abstract,citations.venue,citations.year,citations.referenceCount,citations.citationCount,citations.influentialCitationCount,citations.isOpenAccess,citations.fieldsOfStudy,citations.s2FieldsOfStudy,citations.authors,references.paperId,references.externalIds,references.url,references.title,references.abstract,references.venue,references.year,references.referenceCount,references.citationCount,references.influentialCitationCount,references.isOpenAccess,references.fieldsOfStudy,references.s2FieldsOfStudy,references.authors,tldr"
+        scholar_url = f"https://api.semanticscholar.org/graph/v1/paper/{scholar_paper_id}?fields={fields_to_return}"
         return self.__http_request("GET", scholar_url)
-       
 
-
-    def search_scholar_by_nvivo_paper(self,nvivo_paper):
+    def search_scholar_by_nvivo_paper(self, nvivo_paper):
         paper_id = paper_detail = None
 
         paper_id = self._search_paper_from_scholar_API(nvivo_paper)
@@ -138,14 +135,14 @@ class ScholarSemantic(object):
             paper_id = self._search_paper_from_scholar_website(nvivo_paper)
 
         if paper_id:
-            paper_detail = self._write_found_result(nvivo_paper.get("primary_title"), paper_id)
-        
+            paper_detail = self.get_paper_details(paper_id)
+
+        print("TROUBLE", paper_id, type(paper_detail))
+
         if paper_id and paper_detail:
             self._write_found_result(nvivo_paper.get("primary_title"), paper_detail)
         else:
             self._write_notfound_result(nvivo_paper.get("primary_title"))
-
-
 
     def _extract_author_name_from_fullname(self, author):
         if ", " in author:
@@ -167,7 +164,9 @@ class ScholarSemantic(object):
             file.write(f"{paper_title}\r\n")
 
     def _write_found_result(self, paper_title, paper_details_json):
-        with open(f"{self._result_directory()}/{paper_title}.json", "a") as file:
+        with open(
+            f"{self._result_directory()}/{paper_title.lower()}.json", "a"
+        ) as file:
             file.write(json.dumps(paper_details_json, indent=4, sort_keys=True))
 
 
@@ -199,11 +198,13 @@ if __name__ == "__main__":
     # with open("test.ris", "r") as risFile:
     #     for paper in rispy.load(risFile, skip_unknown_tags=False):
     #         scholar = ScholarSemantic(requests.session())
-    #         scholar.search_paper_from_scholar_API(paper)
-    #         scholar.search_paper_from_scholar_website(paper)
+    #         scholar.search_scholar_by_nvivo_paper(paper)
 
 
 """
-change both query by API and website to return the paperID, then have a method (API) to extract the paper details from ID
-lastly, read and update NVIVO CSV to add the details back.
+read and write into the nvivo csv
+implement snowballing
+    whenver it reads an article, it places all its references/citations on queue. 
+    Threads will monitor this queue and dump articles (and adding references/citations to the queu recursvely)
+    Every item in the queue should have the depth, so we know when to stop.
 """
