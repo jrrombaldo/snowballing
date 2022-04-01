@@ -5,6 +5,7 @@ import requests
 import os
 import json
 
+
 class ScholarSemantic(object):
     def __init__(self, http_session=requests.Session()):
         self.http_session = http_session
@@ -27,7 +28,7 @@ class ScholarSemantic(object):
         )
 
         if http_reponse.status_code != 200:
-            raise Exception(f"funny status code{http_reponse.get('status_code')}")
+            raise Exception(f"funny status code s{http_reponse.status_code}")
 
         json_return = http_reponse.json()
         json_return["status_code"] = http_reponse.status_code
@@ -88,14 +89,22 @@ class ScholarSemantic(object):
         else:
             return None
 
-    def get_paper_details(self, scholar_paper_id):
-        return self.__http_request(
+    def _get_paper_details(self, scholar_paper_id):
+        paper_details =  self.__http_request(
             config["API"]["paper"]["method"],
             config["API"]["paper"]["url"].format(
-                paper=scholar_paper_id,
+                paper_id=scholar_paper_id,
                 fields_to_return=config["API"]["paper"]["fields_to_return"],
             ),
         )
+        log.debug(f"[details] found papers details len = {len(paper_details)}")
+        return paper_details
+
+    def snowballing_backward(paper_id):
+        print("not there yet")
+
+    def snowballing_forward(paper_id):
+        print("not there yet")
 
     def search_scholar_by_ris_paper(self, ris_paper):
         paper_id = paper_detail = None
@@ -105,9 +114,7 @@ class ScholarSemantic(object):
             paper_id = self._search_paper_from_scholar_website(ris_paper)
 
         if paper_id:
-            paper_detail = self._write_found_result(
-                ris_paper.get("primary_title"), paper_id
-            )
+            paper_detail = self._get_paper_details(paper_id)
 
         if paper_id and paper_detail:
             self._write_found_result(ris_paper.get("primary_title"), paper_detail)
