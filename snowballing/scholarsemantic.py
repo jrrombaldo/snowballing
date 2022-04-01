@@ -28,7 +28,7 @@ class ScholarSemantic(object):
         )
 
         if http_reponse.status_code != 200:
-            raise Exception(f"funny status code s{http_reponse.status_code}")
+            raise Exception(f"funny status code {http_reponse.status_code}")
 
         json_return = http_reponse.json()
         json_return["status_code"] = http_reponse.status_code

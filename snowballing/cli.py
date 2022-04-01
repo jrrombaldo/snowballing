@@ -1,4 +1,5 @@
 import argparse
+from snowballing.config import config
 
 
 def parse_cli_args():
@@ -30,12 +31,12 @@ def parse_cli_args():
         help='RIS format file containing bibliography')
     
     parser.add_argument("--threads",
-        help='Number of threads (one thread per paper). Default (75)',
+        help=f'Number of threads (one thread per paper). Default ({config["threadpool_default_size"]})',
         metavar='<nuumber of threads>', 
         action='store',
         required=False,
         type=int,
-        default=1)
+        default=config["threadpool_default_size"])
     
     parser.add_argument('--tor', 
         help='use TOR networks, which thread will create a connection and will have different internet IP',
