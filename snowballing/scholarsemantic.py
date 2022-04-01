@@ -45,7 +45,7 @@ class ScholarSemantic(object):
         if http_result.get("totalResults") and http_result.get("totalResults") > 0:
             paper_id =  http_result.get("results")[0].get("id")
 
-        log.debug(f"[WEB]\tmatch {'FOUND' if paper_id > 0 else 'NOT FOUND'} within {http_result.get('totalResults')} result(s) for {ris_paper['primary_title']}, id = {paper_id}")
+        log.debug(f"[WEB]\tmatch {'FOUND' if paper_id else 'NOT FOUND'} within {http_result.get('totalResults')} result(s) for {ris_paper['primary_title']}, id = {paper_id}")
         return paper_id
 
     def _search_paper_from_scholar_API(self, ris_paper):
@@ -78,7 +78,7 @@ class ScholarSemantic(object):
         paper_id = None
         if matched_paper: paper_id = matched_paper.get("paperId")
 
-        log.debug(f"[API]\tmatch {'FOUND' if matched_paper else 'NOT FOUND'} within {result.get('total')} result(s) for {ris_paper['primary_title']} id = {paper_id}")
+        log.debug(f"[API]\tmatch {'FOUND' if matched_paper else 'NOT FOUND'} within {result.get('total')} result(s) for {ris_paper['primary_title']}, id = {paper_id}")
         return paper_id
 
     def _get_paper_details(self, scholar_paper_id):
@@ -89,14 +89,18 @@ class ScholarSemantic(object):
                 fields_to_return=config["API"]["paper"]["fields_to_return"],
             ),
         )
-        log.debug(f"[details] found papers details for {scholar_paper_id}")
+        log.debug(f"[details] FOUND papers details for {scholar_paper_id}")
         return paper_details
 
-    def snowballing_backward(paper_id):
-        print("not there yet")
+    def snowballing_backward(self, paper_id):
+        print("snowballing_backward not there yet")
 
-    def snowballing_forward(paper_id):
-        print("not there yet")
+    def snowballing_forward(self, paper_id):
+        print("snowballing_forward not there yet")
+    
+    def snowballing_bidrectional(self, paper_id):
+        print("snowballing_bidrectional not there yet")
+
 
     def search_scholar_by_ris_paper(self, ris_paper):
         paper_id = paper_detail = None
