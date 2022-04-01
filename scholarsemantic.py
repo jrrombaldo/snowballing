@@ -1,35 +1,19 @@
-
-import rispy
-import requests
-import json
-from retry import retry
-from multiprocessing.pool import ThreadPool
-from torpy.http.requests import tor_requests_session
-
-import os
-import threading
-import traceback
-
-
 from util.config import config
 from util.logging import log
-
-
-
-
-def get_internet_ip_addr(http_session):
-    return http_session.get(config["http"]["internet_ip_url"]).text
-
+import retry
+import requests
+import os
+import json
 
 class ScholarSemantic(object):
     def __init__(self, http_session=requests.Session()):
         self.http_session = http_session
 
-    @retry(
-        Exception,
-        delay=config["http"]["retry_delay"],
-        tries=config["http"]["retry_attempts"],
-    )
+    # @retry(
+    #     Exception,
+    #     delay=config["http"]["retry_delay"],
+    #     tries=config["http"]["retry_attempts"],
+    # )
     def __http_request(self, method, url, json_body=None):
         # log.debug(f"executing HTTP {method} on {url} with body {json_body}")
 
@@ -152,39 +136,3 @@ class ScholarSemantic(object):
     def _write_found_result(self, paper_title, paper_details_json):
         with open(f"{self._result_directory()}/{paper_title}.json", "a") as file:
             file.write(json.dumps(paper_details_json, indent=4, sort_keys=True))
-
-
-def thread_task(paper):
-    try:
-        with tor_requests_session() as tor_session:
-            threading.current_thread().name = get_internet_ip_addr(tor_session)
-            scholar = ScholarSemantic(tor_session)
-            # scholar._search_paper_from_scholar_API(paper)
-            # scholar._search_paper_from_scholar_website(paper)
-            scholar.search_scholar_by_nvivo_paper(paper)
-
-    except Exception:
-        log.error(
-            f"something went wrong with paper {paper}\n resulting at {traceback.format_exc()}"
-        )
-
-
-if __name__ == "__main__":
-    THREAD_POOL_SIZE = 75
-    with open("test.ris", "r") as risFile:
-        papers = rispy.load(risFile, skip_unknown_tags=False)
-        log.info(f"starting execution with {THREAD_POOL_SIZE} threads ...")
-        with ThreadPool(THREAD_POOL_SIZE) as thread_pool:
-            thread_pool.map(thread_task, papers)
-
-    # with open("test.ris", "r") as risFile:
-    #     for paper in rispy.load(risFile, skip_unknown_tags=False):
-    #         scholar = ScholarSemantic(requests.session())
-    #         scholar.search_paper_from_scholar_API(paper)
-    #         scholar.search_paper_from_scholar_website(paper)
-
-
-"""
-change both query by API and website to return the paperID, then have a method (API) to extract the paper details from ID
-lastly, read and update NVIVO CSV to add the details back.
-"""

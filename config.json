@@ -41,5 +41,6 @@
     },
     "results":{
         "dir":"./results"
-    }
+    },
+    "threadpool_default_size":75
 }
