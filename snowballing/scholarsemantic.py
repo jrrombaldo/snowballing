@@ -4,7 +4,7 @@ from retry import retry
 import requests
 import os
 import json
-from os.path import exists
+import glob
 
 
 class ScholarSemantic(object):
@@ -82,38 +82,25 @@ class ScholarSemantic(object):
         log.debug(f"[API]\tmatch {'FOUND' if matched_paper else 'NOT FOUND'} within {result.get('total')} result(s) for {ris_paper['primary_title']}, id = {paper_id}")
         return paper_id
 
-    def _get_paper_details(self, scholar_paper_id):
-        if not scholar_paper_id: return None # TODO report non existing references....
-
-        if exists(self._result_directory()+os.sep+scholar_paper_id):
-            return None
-
-        """
-        TODO
-        if paper exists on folder return
-        if does not search and save it
-        or save the not found
-        """
-        paper_details =  self.__http_request(
+    def extract_paper_details(self, paper_id, paper_title):
+        paper_detail =  self.__http_request(
             config["API"]["paper"]["method"],
             config["API"]["paper"]["url"].format(
-                paper_id=scholar_paper_id,
+                paper_id=paper_id,
                 fields_to_return=config["API"]["paper"]["fields_to_return"],
             ),
         )
-        log.debug(f"[details] FOUND papers details for {scholar_paper_id}")
 
-        return paper_details
+        if  paper_detail:
+            self._write_found_result(paper_id, paper_detail)
+        else:
+            self._write_notfound_result(paper_title)
 
-    def snowballing_backward(self, paper_id):
-        print("snowballing_backward not there yet")
+        log.debug(f"[details] {'FOUND' if paper_detail else 'NOT FOUND'} papers details for {paper_id}")
 
-    def snowballing_forward(self, paper_id):
-        print("snowballing_forward not there yet")
-    
-    def snowballing_bidrectional(self, paper_id):
-        print("snowballing_bidrectional not there yet")
+        return paper_detail
 
+        
     def search_scholar_by_ris_paper(self, ris_paper):
         paper_id = paper_detail = None
 
@@ -121,36 +108,57 @@ class ScholarSemantic(object):
         if not paper_id:
             paper_id = self._search_paper_from_scholar_website(ris_paper)
 
-        if paper_id:
-            paper_detail = self._get_paper_details(paper_id)
-
-        if paper_id and paper_detail:
-            self._write_found_result(paper_id, paper_detail)
-        else:
+        if not paper_id:
             self._write_notfound_result(ris_paper.get("primary_title"))
+        else:
+            self.extract_paper_details(paper_id, ris_paper.get("primary_title"))
+
+
+
+    def _get_papers_to_snowball(self, paper_detail, direction):
+        where_to_look = []
+        if direction == 'both' or 'forward': where_to_look.append('citations')
+        if direction == 'both' or 'forward': where_to_look.append('references') 
+        
+        papers_to_snowball = []
+        for look_at in where_to_look:
+            for ref in paper_detail.get(look_at):
+                if not ref.get('paperId'): 
+                    self._write_notfound_result(ref.get('title'))
+                else:
+                    papers_to_snowball.append((ref.get('paperId'),ref.get('title') ))
+        return papers_to_snowball
+
+
+
+    def get_references_and_citations_to_snowball(self, direction):
+        papers = []
+        for paper_file in os.listdir(self._result_directory()):
+            if paper_file.endswith(".json"):
+                with open(os.path.join(self._result_directory(),paper_file)) as json_paper:
+                    papers.append(self._get_papers_to_snowball(json.load(json_paper), direction))
+        
+        return papers
 
     
-    # def search_scholar_by_ris_paper(self, ris_paper, direction, current_depth, max_depth, thread_pool):
-    #     paper_id = paper_detail = None
-    #     #  TODO temporary
+    def snowball(self, paper_id, paper_title, direction):
+        if not paper_id:
+            self._write_notfound_result(paper_title)
+            return
 
-    #     if paper_detail:
+        if os.path.exists(os.path.join(self._result_directory(),f'{paper_id}.json')):
+            return
+
+        paper_detail = self.extract_paper_details(paper_id)
+
+        if not paper_detail:
+            return
+        else:
+            return self._get_papers_to_snowball(paper_detail, direction)
         
-    #         if current_depth == max_depth: return
+        
 
-    #         if direction == 'forward' or direction == 'both':
-    #             for citation in paper_detail.get("citations"):
-    #                 if not citation.get('paperId'): 
-    #                     self._write_notfound_result(citation.get('title'))
-    #                 else:
-    #                     print(f"forward - {citation.get('paperId')} - {citation.get('title')}")
 
-    #         if direction == 'backward' or direction == 'both':
-    #             for ref in paper_detail.get("references"):
-    #                 if not ref.get('paperId'): 
-    #                     self._write_notfound_result(ref.get('title'))
-    #                 else:
-    #                     print(f"backward - {ref.get('paperId')} - {ref.get('title')}")
 
 
     def _extract_author_name_from_fullname(self, author):
@@ -175,3 +183,4 @@ class ScholarSemantic(object):
     def _write_found_result(self, paper_title, paper_details_json):
         with open(f"{self._result_directory()}/{paper_title.lower()}.json", "a") as file:
             file.write(json.dumps(paper_details_json, indent=4, sort_keys=True))
+

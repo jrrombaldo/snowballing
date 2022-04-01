@@ -18,7 +18,7 @@
         "search": {
             "url": "https://api.semanticscholar.org/graph/v1/paper/search?query={query}&fields={fields_to_return}&offset=0&limit=99",
             "method": "GET",
-            "fields_to_return": "authors,paperId,externalIds,url,title,abstract,venue,year,referenceCount,citationCount,influentialCitationCount,isOpenAccess,fieldsOfStudy,s2FieldsOfStudy"
+            "fields_to_return": "authors,paperId,url,title,abstract,year,isOpenAccess"
         },
         "paper": {
             "url": "https://api.semanticscholar.org/graph/v1/paper/{paper_id}?fields={fields_to_return}",

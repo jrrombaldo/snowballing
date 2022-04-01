@@ -63,20 +63,35 @@ def get_internet_ip_addr(http_session):
     return http_session.get(config["http"]["internet_ip_url"]).text
 
 
+# def snowball_task(paper_id, paper_title, thread_pool, curr_depth, max_depth, direction, use_tor):
+#     try:
+#         if use_tor:
+#             with tor_requests_session() as tor_session:
+#                 threading.current_thread().name = get_internet_ip_addr(tor_session)
+#                 scholar = ScholarSemantic(tor_session)
+#                 paper_id = getattr(scholar, func_name)(ris_paper)
+#         else:
+#             scholar = ScholarSemantic()
+#             getattr(scholar, func_name)(ris_paper)
 
-def procces_paper(func_name, ris_paper, use_tor):
+#     except Exception:
+#         log.error(f"something went wrong with function {func_name} and paper {ris_paper}, resulting at following error:\n{traceback.format_exc()}")
+
+def search_paper_task(func_name, ris_paper, use_tor):
     try:
         if use_tor:
             with tor_requests_session() as tor_session:
                 threading.current_thread().name = get_internet_ip_addr(tor_session)
                 scholar = ScholarSemantic(tor_session)
-                getattr(scholar, func_name)(ris_paper)
+                paper_id = getattr(scholar, func_name)(ris_paper)
         else:
             scholar = ScholarSemantic()
             getattr(scholar, func_name)(ris_paper)
 
     except Exception:
-        log.error(f"something went wrong with function {func_name} and paper {paper}, resulting at following error:\n{traceback.format_exc()}")
+        log.error(f"something went wrong with function {func_name} and paper {ris_paper}, resulting at following error:\n{traceback.format_exc()}")
+
+
 
 if __name__ == "__main__":
     args = parse_cli_args()
@@ -95,13 +110,17 @@ if __name__ == "__main__":
     
     
     with ThreadPool(args.threads) as thread_pool:
-
-
+        
         #  searching for RIS papers
         for paper in get_papers_from_ris(args.ris_file):
-            thread_pool.apply_async(procces_paper, (func_name, paper, args.tor))
+            thread_pool.apply_async(search_paper_task, (func_name, paper, args.tor))
         
         thread_pool.close()
         thread_pool.join()
 
+    
         # performing snowballing ....
+        # for paper_tuple in ScholarSemantic().get_papers_to_snowball(args.direction):
+        #    print (paper_tuple)
+
+     
