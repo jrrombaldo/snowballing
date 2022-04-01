@@ -3,9 +3,9 @@ import traceback
 from torpy.http.requests import tor_requests_session
 from multiprocessing.pool import ThreadPool
 
-from util.logging import log
-from util.config import config
-from scholarsemantic import ScholarSemantic
+from snowballing.logging import log
+from snowballing.config import config
+from snowballing.scholarsemantic import ScholarSemantic
 
 
 def get_internet_ip_addr(http_session):

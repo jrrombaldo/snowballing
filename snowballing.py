@@ -1,4 +1,4 @@
-from util import threading
+from snowballing import threading
 import rispy
 
 if __name__ == "__main__":

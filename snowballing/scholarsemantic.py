@@ -1,5 +1,5 @@
-from util.config import config
-from util.logging import log
+from snowballing.config import config
+from snowballing.logging import log
 import retry
 import requests
 import os
@@ -35,16 +35,16 @@ class ScholarSemantic(object):
         # log.debug(f"returned {json_return}")
         return json_return
 
-    def _search_paper_from_scholar_website(self, nvivo_paper):
+    def _search_paper_from_scholar_website(self, ris_paper):
         data = config["WEBSITE"]["request_body"]
-        data["queryString"] = nvivo_paper["primary_title"]
+        data["queryString"] = ris_paper["primary_title"]
 
         http_result = self.__http_request(
             config["WEBSITE"]["method"], config["WEBSITE"]["url"], data
         )
 
         log.debug(
-            f"[WEB]\tmatch {'FOUND' if http_result.get('totalResults') > 0 else 'NOT FOUND'} within {http_result.get('totalResults')} result(s) for {nvivo_paper['primary_title']}"
+            f"[WEB]\tmatch {'FOUND' if http_result.get('totalResults') > 0 else 'NOT FOUND'} within {http_result.get('totalResults')} result(s) for {ris_paper['primary_title']}"
         )
 
         if http_result.get("totalResults") and http_result.get("totalResults") > 0:
@@ -52,11 +52,11 @@ class ScholarSemantic(object):
         else:
             return None
 
-    def _search_paper_from_scholar_API(self, nvivo_paper):
+    def _search_paper_from_scholar_API(self, ris_paper):
         result = self.__http_request(
             config["API"]["search"]["method"],
             config["API"]["search"]["url"].format(
-                query=nvivo_paper["primary_title"],
+                query=ris_paper["primary_title"],
                 fields_to_return=config["API"]["search"]["fields_to_return"],
             ),
         )
@@ -64,23 +64,23 @@ class ScholarSemantic(object):
         matched_paper = None
         # checking for matches among returned papers
         if result.get("total") and result.get("total") > 0:
-            nvivo_authors = self._extract_authors_surname_from_nvivo_authors(
-                nvivo_paper.get("first_authors")
+            ris_authors = self._extract_authors_surname_from_ris_authors(
+                ris_paper.get("first_authors")
             )
 
             for scholar_paper in result.get("data"):
                 # search for a papers (among result) tha that maches both title and authors
-                if scholar_paper.get("title").lower() == nvivo_paper.get(
+                if scholar_paper.get("title").lower() == ris_paper.get(
                     "primary_title"
                 ).lower() and all(
-                    nvivo_author.lower() in str(scholar_paper.get("authors")).lower()
-                    for nvivo_author in nvivo_authors
+                    ris_author.lower() in str(scholar_paper.get("authors")).lower()
+                    for ris_author in ris_authors
                 ):
                     matched_paper = scholar_paper
                     break
 
         log.debug(
-            f"[API]\tmatch {'FOUND' if matched_paper else 'NOT FOUND'} within {result.get('total')} result(s) for {nvivo_paper['primary_title']}"
+            f"[API]\tmatch {'FOUND' if matched_paper else 'NOT FOUND'} within {result.get('total')} result(s) for {ris_paper['primary_title']}"
         )
 
         if matched_paper:
@@ -97,22 +97,22 @@ class ScholarSemantic(object):
             ),
         )
 
-    def search_scholar_by_nvivo_paper(self, nvivo_paper):
+    def search_scholar_by_ris_paper(self, ris_paper):
         paper_id = paper_detail = None
 
-        paper_id = self._search_paper_from_scholar_API(nvivo_paper)
+        paper_id = self._search_paper_from_scholar_API(ris_paper)
         if not paper_id:
-            paper_id = self._search_paper_from_scholar_website(nvivo_paper)
+            paper_id = self._search_paper_from_scholar_website(ris_paper)
 
         if paper_id:
             paper_detail = self._write_found_result(
-                nvivo_paper.get("primary_title"), paper_id
+                ris_paper.get("primary_title"), paper_id
             )
 
         if paper_id and paper_detail:
-            self._write_found_result(nvivo_paper.get("primary_title"), paper_detail)
+            self._write_found_result(ris_paper.get("primary_title"), paper_detail)
         else:
-            self._write_notfound_result(nvivo_paper.get("primary_title"))
+            self._write_notfound_result(ris_paper.get("primary_title"))
 
     def _extract_author_name_from_fullname(self, author):
         if ", " in author:
@@ -120,7 +120,7 @@ class ScholarSemantic(object):
         else:
             return author.split(" ")[-1]
 
-    def _extract_authors_surname_from_nvivo_authors(self, authors):
+    def _extract_authors_surname_from_ris_authors(self, authors):
         return [self._extract_author_name_from_fullname(author) for author in authors]
 
     def _result_directory(self):

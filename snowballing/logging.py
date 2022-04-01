@@ -1,5 +1,5 @@
 import logging
-from util.config import config
+from snowballing.config import config
 
 logging.basicConfig(format=config["logging"]["format"])
 
