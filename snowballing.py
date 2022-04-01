@@ -111,13 +111,16 @@ if __name__ == "__main__":
     
     
     with ThreadPool(args.threads) as thread_pool:
+        log.info("searching for bibliography")
+        #  searching for RIS papers
+        for paper in get_papers_from_ris(args.ris_file):
+            thread_pool.apply_async(search_paper_task, (func_name, paper, args.tor))
         
-        # #  searching for RIS papers
-        # for paper in get_papers_from_ris(args.ris_file):
-        #     thread_pool.apply_async(search_paper_task, (func_name, paper, args.tor))
-        
-        # thread_pool.close()
-        # thread_pool.join()
+        thread_pool.close()
+        thread_pool.join()
+
+    with ThreadPool(args.threads) as thread_pool:
+        log.info("snowballing extracted papers")
     
         # performing snowballing ....
         for paper_tuple in ScholarSemantic().get_extracted_papers_to_snowball(args.direction):

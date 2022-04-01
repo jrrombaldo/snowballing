@@ -1,6 +1,6 @@
 {
     "logging": {
-        "format": "%(asctime)s %(levelname)-7s  %(threadName)-18s - %(message)s",
+        "format": "%(asctime)-27s %(levelname)-7s  %(threadName)-17s -  %(message)s",
         "log-file": "./scholar-semantic.log",
         "level": "DEBUG"
     },
@@ -10,8 +10,8 @@
         "headers": {
             "Content-Type": "application/json"
         },
-        "retry_delay": 60,
-        "retry_attempts": 4,
+        "retry_delay": 30,
+        "retry_attempts": 3,
         "internet_ip_url": "http://ifconfig.me/ip"
     },
     "API": {

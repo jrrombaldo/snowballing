@@ -2,9 +2,13 @@ from snowballing.config import config
 from snowballing.logging import log
 from retry import retry
 import requests
+from requests import exceptions
 import os
 import json
-import glob
+
+
+class Non200HTTPStatusCode(Exception):
+    pass
 
 
 class ScholarSemantic(object):
@@ -12,7 +16,11 @@ class ScholarSemantic(object):
         self.http_session = http_session
 
     @retry(
-        Exception,
+        (Non200HTTPStatusCode, 
+            requests.exceptions.ConnectionError, 
+            requests.exceptions.Timeout, 
+            requests.exceptions.ConnectTimeout, 
+            requests.exceptions.ReadTimeout),
         delay=config["http"]["retry_delay"],
         tries=config["http"]["retry_attempts"],
     )
@@ -27,7 +35,7 @@ class ScholarSemantic(object):
         )
 
         if http_reponse.status_code != 200:
-            raise Exception(f"funny status code {http_reponse.status_code}")
+            raise Non200HTTPStatusCode(f"funny status code {http_reponse.status_code}")
 
         json_return = http_reponse.json()
         json_return["status_code"] = http_reponse.status_code

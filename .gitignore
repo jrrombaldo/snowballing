@@ -1,6 +1,5 @@
 venv
 results*
-scholar-semantic.log
+*.log
 .DS_Store
-*.ris
 *.pyc
