@@ -15,42 +15,40 @@ def parse_cli_args():
         description=' Snowballing and metadata searcing...',
         epilog='happy research! :)')
 
-
-    subparsers = parser.add_subparsers(dest="module", required=True, help="operation module")
-    
-    #  Search module
-    search = subparsers.add_parser('search', 
-    help='perform semanticscholar searchs')
-
-
-    # Snowballing method
-    snowballing = subparsers.add_parser('snowballing', 
-        help='whatever it does ...')
-    snowballing.add_argument('--approach', 
+    parser.add_argument('--direction', 
         metavar='<snowballing approach>',
-        required=True,
+        required=False,
+        default='both',
         choices=['backward', 'forward', 'both'],
         help='type of snowballing ...'
     )
 
-    parser.add_argument('ris_file', 
-        metavar='<RIS file>', 
-        type=argparse.FileType('r'),
-        help='RIS format file containing bibliography')
+    parser.add_argument("--depth",
+        help=f'Snowballing depth ...',
+        metavar='depth number', 
+        action='store',
+        required=False,
+        type=int,
+        default=1)
     
     parser.add_argument("--threads",
         help=f'Number of threads (one thread per paper). Default ({config["threadpool_default_size"]})',
-        metavar='<nuumber of threads>', 
+        metavar='<number of threads>', 
         action='store',
         required=False,
         type=int,
         default=config["threadpool_default_size"])
-    
+
     parser.add_argument('--tor', 
         help='use TOR networks, which thread will create a connection and will have different internet IP',
         action='store_true', 
         required=False,
         default=False)
+
+    parser.add_argument('ris_file', 
+        metavar='<RIS file>', 
+        type=argparse.FileType('r'),
+        help='RIS format file containing bibliography')
 
     args = parser.parse_args()
     return args
@@ -66,28 +64,31 @@ def get_internet_ip_addr(http_session):
 
 
 
-def procces_paper(func_name, paper, use_tor):
+def procces_paper(func_name, ris_paper, use_tor):
     try:
         if use_tor:
             with tor_requests_session() as tor_session:
                 threading.current_thread().name = get_internet_ip_addr(tor_session)
                 scholar = ScholarSemantic(tor_session)
-                getattr(scholar, func_name)(paper)
+                getattr(scholar, func_name)(ris_paper)
         else:
             scholar = ScholarSemantic()
-            getattr(scholar, func_name)(paper)
+            getattr(scholar, func_name)(ris_paper)
 
     except Exception:
         log.error(f"something went wrong with function {func_name} and paper {paper}, resulting at following error:\n{traceback.format_exc()}")
 
 if __name__ == "__main__":
     args = parse_cli_args()
+    print (args)
 
-    func_name = None
-    if args.module == 'search':                                        func_name = 'search_scholar_by_ris_paper'
-    if args.module == 'snowballing' and args.approach == 'backward' :  func_name = 'snowballing_backward'
-    if args.module == 'snowballing' and args.approach == 'forward' :   func_name = 'snowballing_forward'
-    if args.module == 'snowballing' and args.approach == 'both' :      func_name = 'snowballing_bidrectional'
+    # func_name = None
+    # if args.module == 'search':                                        func_name = 'search_scholar_by_ris_paper'
+    # if args.module == 'snowballing' and args.approach == 'backward' :  func_name = 'snowballing_backward'
+    # if args.module == 'snowballing' and args.approach == 'forward' :   func_name = 'snowballing_forward'
+    # if args.module == 'snowballing' and args.approach == 'both' :      func_name = 'snowballing_bidrectional'
+
+    func_name = 'search_scholar_by_ris_paper'
 
 
     log.info(f"starting execution with {args.threads} threads and file {args.ris_file.name} {'using' if args.tor else 'not'} tor networks")
@@ -95,8 +96,12 @@ if __name__ == "__main__":
     
     with ThreadPool(args.threads) as thread_pool:
 
+
+        #  searching for RIS papers
         for paper in get_papers_from_ris(args.ris_file):
-            thread_pool.apply_async(procces_paper, (func_name, paper, args.tor,))
+            thread_pool.apply_async(procces_paper, (func_name, paper, args.tor))
         
         thread_pool.close()
         thread_pool.join()
+
+        # performing snowballing ....

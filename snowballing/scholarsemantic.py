@@ -4,6 +4,7 @@ from retry import retry
 import requests
 import os
 import json
+from os.path import exists
 
 
 class ScholarSemantic(object):
@@ -82,6 +83,17 @@ class ScholarSemantic(object):
         return paper_id
 
     def _get_paper_details(self, scholar_paper_id):
+        if not scholar_paper_id: return None # TODO report non existing references....
+
+        if exists(self._result_directory()+os.sep+scholar_paper_id):
+            return None
+
+        """
+        TODO
+        if paper exists on folder return
+        if does not search and save it
+        or save the not found
+        """
         paper_details =  self.__http_request(
             config["API"]["paper"]["method"],
             config["API"]["paper"]["url"].format(
@@ -90,6 +102,7 @@ class ScholarSemantic(object):
             ),
         )
         log.debug(f"[details] FOUND papers details for {scholar_paper_id}")
+
         return paper_details
 
     def snowballing_backward(self, paper_id):
@@ -100,7 +113,6 @@ class ScholarSemantic(object):
     
     def snowballing_bidrectional(self, paper_id):
         print("snowballing_bidrectional not there yet")
-
 
     def search_scholar_by_ris_paper(self, ris_paper):
         paper_id = paper_detail = None
@@ -113,9 +125,33 @@ class ScholarSemantic(object):
             paper_detail = self._get_paper_details(paper_id)
 
         if paper_id and paper_detail:
-            self._write_found_result(ris_paper.get("primary_title"), paper_detail)
+            self._write_found_result(paper_id, paper_detail)
         else:
             self._write_notfound_result(ris_paper.get("primary_title"))
+
+    
+    # def search_scholar_by_ris_paper(self, ris_paper, direction, current_depth, max_depth, thread_pool):
+    #     paper_id = paper_detail = None
+    #     #  TODO temporary
+
+    #     if paper_detail:
+        
+    #         if current_depth == max_depth: return
+
+    #         if direction == 'forward' or direction == 'both':
+    #             for citation in paper_detail.get("citations"):
+    #                 if not citation.get('paperId'): 
+    #                     self._write_notfound_result(citation.get('title'))
+    #                 else:
+    #                     print(f"forward - {citation.get('paperId')} - {citation.get('title')}")
+
+    #         if direction == 'backward' or direction == 'both':
+    #             for ref in paper_detail.get("references"):
+    #                 if not ref.get('paperId'): 
+    #                     self._write_notfound_result(ref.get('title'))
+    #                 else:
+    #                     print(f"backward - {ref.get('paperId')} - {ref.get('title')}")
+
 
     def _extract_author_name_from_fullname(self, author):
         if ", " in author:
