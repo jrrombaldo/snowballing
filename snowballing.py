@@ -84,28 +84,32 @@ def snowball_task(paper_id, paper_title, thread_pool, curr_depth, max_depth, dir
     except Exception:
         log.error(f"something went wrong with paper_id {paper_id} and title {paper_title}, resulting at following error:\n{traceback.format_exc()}")
 
-def search_paper_task(func_name, ris_paper, use_tor):
+def search_paper_task(ris_paper, use_tor):
     try:
         if use_tor:
             with tor_requests_session() as tor_session:
                 threading.current_thread().name = get_internet_ip_addr(tor_session)
                 scholar = ScholarSemantic(tor_session)
-                paper_id = getattr(scholar, func_name)(ris_paper)
+                paper_id = scholar.search_scholar_by_ris_paper(ris_paper)
         else:
             scholar = ScholarSemantic()
-            getattr(scholar, func_name)(ris_paper)
+            paper_id = scholar.search_scholar_by_ris_paper(ris_paper)
 
     except Exception:
         log.error(f"something went wrong with function {func_name} and paper {ris_paper}, resulting at following error:\n{traceback.format_exc()}")
 
 
+def adjust_not_found_file():
+    file = './results/not_found.txt'
+    with open(file, 'r') as fr:
+        lines = sorted(dict.fromkeys(fr.read().splitlines()))
+        with open (file,'w') as fw:
+            fw.writelines(s + '\n' for s in lines)
+
+
 
 if __name__ == "__main__":
     args = parse_cli_args()
-
-
-    func_name = 'search_scholar_by_ris_paper'
-
 
     log.info(f"starting execution with:\n \t{args.threads} threads\n \tfile {args.ris_file.name}\n \t{'using' if args.tor else 'not'} tor networks\n \tdepth of {args.depth}\n \tsnowball direction of {args.direction}\t")
     
@@ -114,7 +118,7 @@ if __name__ == "__main__":
         log.info("searching for bibliography")
         #  searching for RIS papers
         for paper in get_papers_from_ris(args.ris_file):
-            thread_pool.apply_async(search_paper_task, (func_name, paper, args.tor))
+            thread_pool.apply_async(search_paper_task, (paper, args.tor))
         
         thread_pool.close()
         thread_pool.join()
@@ -129,4 +133,4 @@ if __name__ == "__main__":
         thread_pool.close()
         thread_pool.join()
 
-     
+    adjust_not_found_file()
