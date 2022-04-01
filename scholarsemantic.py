@@ -1,29 +1,20 @@
-from concurrent.futures import process
+
 import rispy
 import requests
 import json
 from retry import retry
 from multiprocessing.pool import ThreadPool
 from torpy.http.requests import tor_requests_session
-import logging
+
 import os
 import threading
 import traceback
 
 
 from util.config import config
+from util.logging import log
 
 
-logging.basicConfig(format=config["logging"]["format"])
-
-logging.getLogger().setLevel(logging.FATAL)  # disable imported module logs
-
-log = logging.getLogger("scholar-semantic")
-log.setLevel(config["logging"]["level"])
-
-log.addHandler(logging.FileHandler(config["logging"]["log-file"]))
-for log_handler in log.handlers:
-    log_handler.setFormatter(logging.Formatter(config["logging"]["format"]))
 
 
 def get_internet_ip_addr(http_session):
