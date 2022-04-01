@@ -1,10 +1,46 @@
 {
-    "tor": {
-        "proxy_ip": "localhost",
-        "health_check_host": "http://ifconfig.me/ip",
-        "hops":3
-
+    "logging": {
+        "format": "%(asctime)s %(levelname)-7s  %(threadName)-18s - %(message)s",
+        "log-file": "./scholar-semantic.log",
+        "level": "DEBUG"
     },
-    "other": {
-    }
+    "http": {
+        "cert_validation": true,
+        "proxies": null,
+        "headers": {
+            "Content-Type": "application/json"
+        },
+        "retry_delay": 60,
+        "retry_attempts": 4,
+        "internet_ip_url": "http://ifconfig.me/ip"
+    },
+    "API": {
+        "search": {
+            "url": "https://api.semanticscholar.org/graph/v1/paper/search?query={query}&fields={fields_to_return}&offset=0&limit=99",
+            "method": "GET",
+            "fields_to_return": "authors,paperId,externalIds,url,title,abstract,venue,year,referenceCount,citationCount,influentialCitationCount,isOpenAccess,fieldsOfStudy,s2FieldsOfStudy"
+        },
+        "paper": {
+            "url": "https://api.semanticscholar.org/graph/v1/paper/{paper_id}&fields={fields_to_return}",
+            "method": "GET",
+            "fields_to_return": "paperId,externalIds,url,title,abstract,venue,year,referenceCount,citationCount,influentialCitationCount,isOpenAccess,fieldsOfStudy,s2FieldsOfStudy,authors,citations,references,embedding,tldr"
+        }
+    },
+    "WEBSITE": {
+        "url": "https://www.semanticscholar.org/api/1/search",
+        "method": "POST",
+        "request_body": {
+            "queryString": "TO REPLACE",
+            "page": 1,
+            "pageSize": 10,
+            "sort": "relevance",
+            "authors": [],
+            "coAuthors": [],
+            "venues": []
+        }
+    },
+    "results":{
+        "dir":"./results"
+    },
+    "threadpool_default_size":75
 }
