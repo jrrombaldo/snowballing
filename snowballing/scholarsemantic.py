@@ -83,6 +83,7 @@ class ScholarSemantic(object):
         return paper_id
 
     def extract_paper_details(self, paper_id, paper_title):
+        log.debug(f"extracting paper {paper_id}, {paper_title}")
         paper_detail =  self.__http_request(
             config["API"]["paper"]["method"],
             config["API"]["paper"]["url"].format(
@@ -92,6 +93,7 @@ class ScholarSemantic(object):
         )
 
         if  paper_detail:
+            log.error(f'Paper NOT FOUND {paper_id}')
             self._write_found_result(paper_id, paper_detail)
         else:
             self._write_notfound_result(paper_title)
@@ -115,7 +117,7 @@ class ScholarSemantic(object):
 
 
 
-    def _get_papers_to_snowball(self, paper_detail, direction):
+    def get_references_and_citations_to_snowball(self, paper_detail, direction):
         where_to_look = []
         if direction == 'both' or 'forward': where_to_look.append('citations')
         if direction == 'both' or 'forward': where_to_look.append('references') 
@@ -131,35 +133,34 @@ class ScholarSemantic(object):
 
 
 
-    def get_references_and_citations_to_snowball(self, direction):
+    def get_extracted_papers_to_snowball(self, direction):
         papers = []
         for paper_file in os.listdir(self._result_directory()):
             if paper_file.endswith(".json"):
                 with open(os.path.join(self._result_directory(),paper_file)) as json_paper:
-                    papers.append(self._get_papers_to_snowball(json.load(json_paper), direction))
+                    papers.extend(self.get_references_and_citations_to_snowball(json.load(json_paper), direction))
         
         return papers
 
     
     def snowball(self, paper_id, paper_title, direction):
-        if not paper_id:
+        log.debug(f'snowballing for {paper_id}, {paper_title}, direction = {direction}')
+        if paper_id == None:
             self._write_notfound_result(paper_title)
             return
 
         if os.path.exists(os.path.join(self._result_directory(),f'{paper_id}.json')):
+            log.debug(f'already extracted -> {paper_id}, {paper_title}')
             return
 
-        paper_detail = self.extract_paper_details(paper_id)
+        paper_detail = self.extract_paper_details(paper_id, paper_title)
 
-        if not paper_detail:
-            return
+        if  paper_detail:
+            references = self.get_references_and_citations_to_snowball(paper_detail, direction)
+            log.debug(f'found {len(references)} references for {paper_id}, {paper_title}')
         else:
-            return self._get_papers_to_snowball(paper_detail, direction)
+            return
         
-        
-
-
-
 
     def _extract_author_name_from_fullname(self, author):
         if ", " in author:
@@ -183,4 +184,6 @@ class ScholarSemantic(object):
     def _write_found_result(self, paper_title, paper_details_json):
         with open(f"{self._result_directory()}/{paper_title.lower()}.json", "a") as file:
             file.write(json.dumps(paper_details_json, indent=4, sort_keys=True))
+
+
 

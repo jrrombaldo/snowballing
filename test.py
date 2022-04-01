@@ -1,5 +1,6 @@
-from snowballing import cli
+from snowballing.scholarsemantic import ScholarSemantic
+
 
 if __name__ == "__main__":
-    args =  cli.parse_cli_args()
-    print (args)
+    for paper_tuple in ScholarSemantic().get_extracted_papers_to_snowball('both'):
+        print (paper_tuple)

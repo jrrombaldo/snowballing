@@ -63,19 +63,26 @@ def get_internet_ip_addr(http_session):
     return http_session.get(config["http"]["internet_ip_url"]).text
 
 
-# def snowball_task(paper_id, paper_title, thread_pool, curr_depth, max_depth, direction, use_tor):
-#     try:
-#         if use_tor:
-#             with tor_requests_session() as tor_session:
-#                 threading.current_thread().name = get_internet_ip_addr(tor_session)
-#                 scholar = ScholarSemantic(tor_session)
-#                 paper_id = getattr(scholar, func_name)(ris_paper)
-#         else:
-#             scholar = ScholarSemantic()
-#             getattr(scholar, func_name)(ris_paper)
+def snowball_task(paper_id, paper_title, thread_pool, curr_depth, max_depth, direction, use_tor):
+    try:
+        if curr_depth == max_depth: return
 
-#     except Exception:
-#         log.error(f"something went wrong with function {func_name} and paper {ris_paper}, resulting at following error:\n{traceback.format_exc()}")
+        references = None
+
+        if use_tor:
+            with tor_requests_session() as tor_session:
+                threading.current_thread().name = get_internet_ip_addr(tor_session)
+                references = ScholarSemantic(tor_session).snowball(paper_id, paper_title, direction)
+        else:
+            references = ScholarSemantic(tor_session).snowball(paper_id, paper_title, direction)
+
+        if references:
+            for paper_tuple in references:
+                thread_pool.apply_async(snowball_task, (paper_tuple[0], paper_tuple[1], thread_pool, curr_depth+1, max_depth, direction, use_tor))
+        return
+
+    except Exception:
+        log.error(f"something went wrong with paper_id {paper_id} and title {paper_title}, resulting at following error:\n{traceback.format_exc()}")
 
 def search_paper_task(func_name, ris_paper, use_tor):
     try:
@@ -95,32 +102,28 @@ def search_paper_task(func_name, ris_paper, use_tor):
 
 if __name__ == "__main__":
     args = parse_cli_args()
-    print (args)
 
-    # func_name = None
-    # if args.module == 'search':                                        func_name = 'search_scholar_by_ris_paper'
-    # if args.module == 'snowballing' and args.approach == 'backward' :  func_name = 'snowballing_backward'
-    # if args.module == 'snowballing' and args.approach == 'forward' :   func_name = 'snowballing_forward'
-    # if args.module == 'snowballing' and args.approach == 'both' :      func_name = 'snowballing_bidrectional'
 
     func_name = 'search_scholar_by_ris_paper'
 
 
-    log.info(f"starting execution with {args.threads} threads and file {args.ris_file.name} {'using' if args.tor else 'not'} tor networks")
+    log.info(f"starting execution with:\n \t{args.threads} threads\n \tfile {args.ris_file.name}\n \t{'using' if args.tor else 'not'} tor networks\n \tdepth of {args.depth}\n \tsnowball direction of {args.direction}\t")
     
     
     with ThreadPool(args.threads) as thread_pool:
         
-        #  searching for RIS papers
-        for paper in get_papers_from_ris(args.ris_file):
-            thread_pool.apply_async(search_paper_task, (func_name, paper, args.tor))
+        # #  searching for RIS papers
+        # for paper in get_papers_from_ris(args.ris_file):
+        #     thread_pool.apply_async(search_paper_task, (func_name, paper, args.tor))
         
-        thread_pool.close()
-        thread_pool.join()
-
+        # thread_pool.close()
+        # thread_pool.join()
     
         # performing snowballing ....
-        # for paper_tuple in ScholarSemantic().get_papers_to_snowball(args.direction):
-        #    print (paper_tuple)
+        for paper_tuple in ScholarSemantic().get_extracted_papers_to_snowball(args.direction):
+            thread_pool.apply_async(snowball_task, (paper_tuple[0], paper_tuple[1], thread_pool, 0, args.depth, args.direction, args.tor ))
+
+        thread_pool.close()
+        thread_pool.join()
 
      
