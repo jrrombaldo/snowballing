@@ -96,7 +96,7 @@ def search_paper_task(ris_paper, use_tor):
             paper_id = scholar.search_scholar_by_ris_paper(ris_paper)
 
     except Exception:
-        log.error(f"something went wrong with function {func_name} and paper {ris_paper}, resulting at following error:\n{traceback.format_exc()}")
+        log.error(f"something went wrong with paper {ris_paper}, resulting at following error:\n{traceback.format_exc()}")
 
 
 def adjust_not_found_file():

@@ -2,7 +2,7 @@ from snowballing.config import config
 from snowballing.logging import log
 from retry import retry
 import requests
-from requests import exceptions
+import torpy
 import os
 import json
 
@@ -20,7 +20,8 @@ class SemanticScholar(object):
             requests.exceptions.ConnectionError, 
             requests.exceptions.Timeout, 
             requests.exceptions.ConnectTimeout, 
-            requests.exceptions.ReadTimeout),
+            requests.exceptions.ReadTimeout,
+            torpy.circuit.CellTimeoutError),
         delay=config["http"]["retry_delay"],
         tries=config["http"]["retry_attempts"],
     )
@@ -99,11 +100,10 @@ class SemanticScholar(object):
                 fields_to_return=config["API"]["paper"]["fields_to_return"],
             ),
         )
-
         if  paper_detail:
-            log.info(f'Paper NOT FOUND {paper_id}')
             self._write_found_result(paper_id, paper_detail)
         else:
+            log.error(f'[details] Paper NOT FOUND {paper_id}')
             self._write_notfound_result(paper_title)
 
         log.debug(f"[details] {'FOUND' if paper_detail else 'NOT FOUND'} papers details for {paper_id}")
