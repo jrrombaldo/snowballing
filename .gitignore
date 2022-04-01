@@ -3,3 +3,4 @@ results*
 scholar-semantic.log
 .DS_Store
 *.ris
+*.pyc

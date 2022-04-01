@@ -16,8 +16,6 @@ class ScholarSemantic(object):
         tries=config["http"]["retry_attempts"],
     )
     def __http_request(self, method, url, json_body=None):
-        # log.debug(f"executing HTTP {method} on {url} with body {json_body}")
-
         http_reponse = self.http_session.request(
             method,
             url=url,
@@ -33,7 +31,6 @@ class ScholarSemantic(object):
         json_return = http_reponse.json()
         json_return["status_code"] = http_reponse.status_code
 
-        # log.debug(f"returned {json_return}")
         return json_return
 
     def _search_paper_from_scholar_website(self, ris_paper):
@@ -44,14 +41,12 @@ class ScholarSemantic(object):
             config["WEBSITE"]["method"], config["WEBSITE"]["url"], data
         )
 
-        log.debug(
-            f"[WEB]\tmatch {'FOUND' if http_result.get('totalResults') > 0 else 'NOT FOUND'} within {http_result.get('totalResults')} result(s) for {ris_paper['primary_title']}"
-        )
-
+        paper_id = None
         if http_result.get("totalResults") and http_result.get("totalResults") > 0:
-            return http_result.get("results")[0].get("id")
-        else:
-            return None
+            paper_id =  http_result.get("results")[0].get("id")
+
+        log.debug(f"[WEB]\tmatch {'FOUND' if paper_id > 0 else 'NOT FOUND'} within {http_result.get('totalResults')} result(s) for {ris_paper['primary_title']}, id = {paper_id}")
+        return paper_id
 
     def _search_paper_from_scholar_API(self, ris_paper):
         result = self.__http_request(
@@ -80,14 +75,11 @@ class ScholarSemantic(object):
                     matched_paper = scholar_paper
                     break
 
-        log.debug(
-            f"[API]\tmatch {'FOUND' if matched_paper else 'NOT FOUND'} within {result.get('total')} result(s) for {ris_paper['primary_title']}"
-        )
+        paper_id = None
+        if matched_paper: paper_id = matched_paper.get("paperId")
 
-        if matched_paper:
-            return matched_paper.get("paperId")
-        else:
-            return None
+        log.debug(f"[API]\tmatch {'FOUND' if matched_paper else 'NOT FOUND'} within {result.get('total')} result(s) for {ris_paper['primary_title']} id = {paper_id}")
+        return paper_id
 
     def _get_paper_details(self, scholar_paper_id):
         paper_details =  self.__http_request(
@@ -97,7 +89,7 @@ class ScholarSemantic(object):
                 fields_to_return=config["API"]["paper"]["fields_to_return"],
             ),
         )
-        log.debug(f"[details] found papers details len = {len(paper_details)}")
+        log.debug(f"[details] found papers details for {scholar_paper_id}")
         return paper_details
 
     def snowballing_backward(paper_id):
@@ -141,5 +133,5 @@ class ScholarSemantic(object):
             file.write(f"{paper_title}\r\n")
 
     def _write_found_result(self, paper_title, paper_details_json):
-        with open(f"{self._result_directory()}/{paper_title}.json", "a") as file:
+        with open(f"{self._result_directory()}/{paper_title.lower()}.json", "a") as file:
             file.write(json.dumps(paper_details_json, indent=4, sort_keys=True))

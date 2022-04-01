@@ -21,9 +21,9 @@
             "fields_to_return": "authors,paperId,externalIds,url,title,abstract,venue,year,referenceCount,citationCount,influentialCitationCount,isOpenAccess,fieldsOfStudy,s2FieldsOfStudy"
         },
         "paper": {
-            "url": "https://api.semanticscholar.org/graph/v1/paper/{paper_id}&fields={fields_to_return}",
+            "url": "https://api.semanticscholar.org/graph/v1/paper/{paper_id}?fields={fields_to_return}",
             "method": "GET",
-            "fields_to_return": "paperId,externalIds,url,title,abstract,venue,year,referenceCount,citationCount,influentialCitationCount,isOpenAccess,fieldsOfStudy,s2FieldsOfStudy,authors,citations,references,embedding,tldr"
+            "fields_to_return": "paperId,externalIds,url,title,abstract,venue,year,referenceCount,citationCount,influentialCitationCount,isOpenAccess,fieldsOfStudy,s2FieldsOfStudy,authors.authorId,authors.name,authors.aliases,authors.paperCount,authors.citationCount,authors.homepage,citations.paperId,citations.externalIds,citations.url,citations.title,citations.abstract,citations.venue,citations.year,citations.referenceCount,citations.citationCount,citations.influentialCitationCount,citations.isOpenAccess,citations.fieldsOfStudy,citations.s2FieldsOfStudy,citations.authors,references.paperId,references.externalIds,references.url,references.title,references.abstract,references.venue,references.year,references.referenceCount,references.citationCount,references.influentialCitationCount,references.isOpenAccess,references.fieldsOfStudy,references.s2FieldsOfStudy,references.authors,tldr"
         }
     },
     "WEBSITE": {

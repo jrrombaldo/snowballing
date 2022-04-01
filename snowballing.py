@@ -8,6 +8,7 @@ from snowballing.logging import log
 from snowballing.config import config
 from snowballing.scholarsemantic import ScholarSemantic
 
+
 def get_internet_ip_addr(http_session):
     return http_session.get(config["http"]["internet_ip_url"]).text
 
