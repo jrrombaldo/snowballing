@@ -1,5 +1,6 @@
-from snowballing import threading
 import rispy
+from snowballing import threading
+
 
 if __name__ == "__main__":
     papers = rispy.load(open("test.ris"), skip_unknown_tags=False)

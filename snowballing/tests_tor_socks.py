@@ -56,7 +56,7 @@ def till_tor_is_ready():
     print ("connection completed")
 
 
-import TorSiceCar
+import snowballing.TorSiceCar as TorSiceCar
 
 if __name__ =='__main__':
 

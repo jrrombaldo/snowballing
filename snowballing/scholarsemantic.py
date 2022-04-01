@@ -1,6 +1,6 @@
 from snowballing.config import config
 from snowballing.logging import log
-import retry
+from retry import retry
 import requests
 import os
 import json
@@ -9,11 +9,11 @@ class ScholarSemantic(object):
     def __init__(self, http_session=requests.Session()):
         self.http_session = http_session
 
-    # @retry(
-    #     Exception,
-    #     delay=config["http"]["retry_delay"],
-    #     tries=config["http"]["retry_attempts"],
-    # )
+    @retry(
+        Exception,
+        delay=config["http"]["retry_delay"],
+        tries=config["http"]["retry_attempts"],
+    )
     def __http_request(self, method, url, json_body=None):
         # log.debug(f"executing HTTP {method} on {url} with body {json_body}")
 

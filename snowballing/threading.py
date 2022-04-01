@@ -16,7 +16,7 @@ def thread_task(paper):
         with tor_requests_session() as tor_session:
             threading.current_thread().name = get_internet_ip_addr(tor_session)
             scholar = ScholarSemantic(tor_session)
-            scholar.search_scholar_by_nvivo_paper(paper)
+            scholar.search_scholar_by_ris_paper(paper)
 
     except Exception:
         log.error(
