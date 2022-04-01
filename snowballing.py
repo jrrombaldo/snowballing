@@ -7,7 +7,7 @@ from multiprocessing.pool import ThreadPool
 
 from snowballing.logging import log
 from snowballing.config import config
-from snowballing.scholarsemantic import ScholarSemantic
+from snowballing.semanticscholar import SemanticScholar
 
 
 def parse_cli_args():
@@ -72,9 +72,9 @@ def snowball_task(paper_id, paper_title, thread_pool, curr_depth, max_depth, dir
         if use_tor:
             with tor_requests_session() as tor_session:
                 threading.current_thread().name = get_internet_ip_addr(tor_session)
-                references = ScholarSemantic(tor_session).snowball(paper_id, paper_title, direction)
+                references = SemanticScholar(tor_session).snowball(paper_id, paper_title, direction)
         else:
-            references = ScholarSemantic(tor_session).snowball(paper_id, paper_title, direction)
+            references = SemanticScholar(tor_session).snowball(paper_id, paper_title, direction)
 
         if references:
             for paper_tuple in references:
@@ -89,10 +89,10 @@ def search_paper_task(ris_paper, use_tor):
         if use_tor:
             with tor_requests_session() as tor_session:
                 threading.current_thread().name = get_internet_ip_addr(tor_session)
-                scholar = ScholarSemantic(tor_session)
+                scholar = SemanticScholar(tor_session)
                 paper_id = scholar.search_scholar_by_ris_paper(ris_paper)
         else:
-            scholar = ScholarSemantic()
+            scholar = SemanticScholar()
             paper_id = scholar.search_scholar_by_ris_paper(ris_paper)
 
     except Exception:
@@ -127,10 +127,10 @@ if __name__ == "__main__":
         log.info("snowballing extracted papers")
     
         # performing snowballing ....
-        for paper_tuple in ScholarSemantic().get_extracted_papers_to_snowball(args.direction):
+        for paper_tuple in SemanticScholar().get_extracted_papers_to_snowball(args.direction):
             thread_pool.apply_async(snowball_task, (paper_tuple[0], paper_tuple[1], thread_pool, 0, args.depth, args.direction, args.tor ))
 
         thread_pool.close()
         thread_pool.join()
 
-    adjust_not_found_file()
+    # adjust_not_found_file()

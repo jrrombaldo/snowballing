@@ -3,3 +3,5 @@ results*
 *.log
 .DS_Store
 *.pyc
+*.ris
+test.py

@@ -11,7 +11,7 @@ class Non200HTTPStatusCode(Exception):
     pass
 
 
-class ScholarSemantic(object):
+class SemanticScholar(object):
     def __init__(self, http_session=requests.Session()):
         self.http_session = http_session
 
@@ -101,7 +101,7 @@ class ScholarSemantic(object):
         )
 
         if  paper_detail:
-            log.error(f'Paper NOT FOUND {paper_id}')
+            log.info(f'Paper NOT FOUND {paper_id}')
             self._write_found_result(paper_id, paper_detail)
         else:
             self._write_notfound_result(paper_title)
