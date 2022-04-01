@@ -10,44 +10,45 @@ import os
 import threading
 import traceback
 
-log_format_str = "%(asctime)s %(levelname)-7s  %(threadName)-18s - %(message)s"
-logging.basicConfig(format=log_format_str)
+
+from util.config import config
+
+
+logging.basicConfig(format=config["logging"]["format"])
 
 logging.getLogger().setLevel(logging.FATAL)  # disable imported module logs
 
 log = logging.getLogger("scholar-semantic")
-log.setLevel(logging.DEBUG)
+log.setLevel(config["logging"]["level"])
 
-log.addHandler(logging.FileHandler("scholar-semantic.log"))
+log.addHandler(logging.FileHandler(config["logging"]["log-file"]))
 for log_handler in log.handlers:
-    log_handler.setFormatter(logging.Formatter(log_format_str))
+    log_handler.setFormatter(logging.Formatter(config["logging"]["format"]))
 
 
 def get_internet_ip_addr(http_session):
-    return http_session.get("http://ifconfig.me/ip").text
+    return http_session.get(config["http"]["internet_ip_url"]).text
 
 
 class ScholarSemantic(object):
-    def __init__(
-        self, http_session=requests.Session(), proxies=None, http_cert_validation=True
-    ):
+    def __init__(self, http_session=requests.Session()):
         self.http_session = http_session
-        self.proxies = proxies
-        self.http_cert_validation = http_cert_validation
 
-    @retry(Exception, delay=60, tries=4)
+    @retry(
+        Exception,
+        delay=config["http"]["retry_delay"],
+        tries=config["http"]["retry_attempts"],
+    )
     def __http_request(self, method, url, json_body=None):
         # log.debug(f"executing HTTP {method} on {url} with body {json_body}")
-
-        headers = {"Content-Type": "application/json"}
 
         http_reponse = self.http_session.request(
             method,
             url=url,
             json=json_body,
-            headers=headers,
-            verify=self.http_cert_validation,
-            proxies=self.proxies,
+            headers=config["http"]["headers"],
+            verify=config["http"]["cert_validation"],
+            proxies=config["http"]["proxies"],
         )
 
         if http_reponse.status_code != 200:
@@ -60,41 +61,31 @@ class ScholarSemantic(object):
         return json_return
 
     def _search_paper_from_scholar_website(self, nvivo_paper):
-        scholar_website_url = f"https://www.semanticscholar.org/api/1/search"
+        data = config["WEBSITE"]["request_body"]
+        data["queryString"] = nvivo_paper["primary_title"]
 
-        data = {
-            "queryString": nvivo_paper["primary_title"],
-            "page": 1,
-            "pageSize": 10,
-            "sort": "relevance",
-            # "authors": self._extract_authors_surname_from_nvivo_authors(
-            #     nvivo_paper.get("first_authors")
-            # ),
-            "authors": [],
-            "coAuthors": [],
-            "venues": [],
-            #    "yearFilter":year
-        }
-
-        http_result = self.__http_request("POST", scholar_website_url, data)
-
+        http_result = self.__http_request(
+            config["WEBSITE"]["method"], config["WEBSITE"]["url"], data
+        )
 
         log.debug(
             f"[WEB]\tmatch {'FOUND' if http_result.get('totalResults') > 0 else 'NOT FOUND'} within {http_result.get('totalResults')} result(s) for {nvivo_paper['primary_title']}"
         )
 
-        if http_result.get('totalResults') and http_result.get('totalResults') > 0:
-            return http_result.get('results')[0].get('id')
+        if http_result.get("totalResults") and http_result.get("totalResults") > 0:
+            return http_result.get("results")[0].get("id")
         else:
             return None
 
     def _search_paper_from_scholar_API(self, nvivo_paper):
-        returning_fields = "authors,paperId,externalIds,url,title,abstract,venue,year,referenceCount,citationCount,influentialCitationCount,isOpenAccess,fieldsOfStudy,s2FieldsOfStudy"
-        scholar_url = f"https://api.semanticscholar.org/graph/v1/paper/search?query={nvivo_paper['primary_title']}&fields={returning_fields}&offset=0&limit=99"
+        result = self.__http_request(
+            config["API"]["search"]["method"],
+            config["API"]["search"]["url"].format(
+                query=nvivo_paper["primary_title"],
+                fields_to_return=config["API"]["search"]["fields_to_return"],
+            ),
+        )
 
-        result = self.__http_request("GET", scholar_url)
-
-       
         matched_paper = None
         # checking for matches among returned papers
         if result.get("total") and result.get("total") > 0:
@@ -118,19 +109,20 @@ class ScholarSemantic(object):
         )
 
         if matched_paper:
-            return matched_paper.get('paperId')
+            return matched_paper.get("paperId")
         else:
             return None
 
-    def get_paper_details(self, scholar_paper_id, paper_title):
-        fields_to_return = 'paperId,externalIds,url,title,abstract,venue,year,referenceCount,citationCount,influentialCitationCount,isOpenAccess,fieldsOfStudy,s2FieldsOfStudy,authors,citations,references,embedding,tldr'
-        scholar_url = f"https://api.semanticscholar.org/graph/v1/paper/{scholar_paper_id}&fields={fields_to_return}"
+    def get_paper_details(self, scholar_paper_id):
+        return self.__http_request(
+            config["API"]["paper"]["method"],
+            config["API"]["paper"]["url"].format(
+                paper=scholar_paper_id,
+                fields_to_return=config["API"]["paper"]["fields_to_return"],
+            ),
+        )
 
-        return self.__http_request("GET", scholar_url)
-       
-
-
-    def search_scholar_by_nvivo_paper(self,nvivo_paper):
+    def search_scholar_by_nvivo_paper(self, nvivo_paper):
         paper_id = paper_detail = None
 
         paper_id = self._search_paper_from_scholar_API(nvivo_paper)
@@ -138,14 +130,14 @@ class ScholarSemantic(object):
             paper_id = self._search_paper_from_scholar_website(nvivo_paper)
 
         if paper_id:
-            paper_detail = self._write_found_result(nvivo_paper.get("primary_title"), paper_id)
-        
+            paper_detail = self._write_found_result(
+                nvivo_paper.get("primary_title"), paper_id
+            )
+
         if paper_id and paper_detail:
             self._write_found_result(nvivo_paper.get("primary_title"), paper_detail)
         else:
             self._write_notfound_result(nvivo_paper.get("primary_title"))
-
-
 
     def _extract_author_name_from_fullname(self, author):
         if ", " in author:
@@ -187,14 +179,12 @@ def thread_task(paper):
 
 
 if __name__ == "__main__":
-
     THREAD_POOL_SIZE = 75
-    with open("scoped.ris", "r") as risFile:
+    with open("test.ris", "r") as risFile:
         papers = rispy.load(risFile, skip_unknown_tags=False)
         log.info(f"starting execution with {THREAD_POOL_SIZE} threads ...")
         with ThreadPool(THREAD_POOL_SIZE) as thread_pool:
             thread_pool.map(thread_task, papers)
-            thread_pool.join()
 
     # with open("test.ris", "r") as risFile:
     #     for paper in rispy.load(risFile, skip_unknown_tags=False):
