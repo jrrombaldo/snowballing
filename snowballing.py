@@ -118,7 +118,9 @@ if __name__ == "__main__":
         log.info("searching for bibliography")
         #  searching for RIS papers
         for paper in get_papers_from_ris(args.ris_file):
-            thread_pool.apply_async(search_paper_task, (paper, args.tor))
+            thread_pool.apply_async(
+                search_paper_task, (paper, args.tor)
+            ).get(timeout=config['threadpool_thread_timeout'])
         
         thread_pool.close()
         thread_pool.join()
@@ -127,8 +129,10 @@ if __name__ == "__main__":
         log.info("snowballing extracted papers")
     
         # performing snowballing ....
-        for paper_tuple in SemanticScholar().get_extracted_papers_to_snowball(args.direction):
-            thread_pool.apply_async(snowball_task, (paper_tuple[0], paper_tuple[1], thread_pool, 0, args.depth, args.direction, args.tor ))
+        for paper_tuple in SemanticScholar().get_references_and_citations_from_extracted_papers(args.direction):
+            thread_pool.apply_async(
+                snowball_task, (paper_tuple[0], paper_tuple[1], thread_pool, 0, args.depth, args.direction, args.tor)
+            ).get(timeout=config['threadpool_thread_timeout'])
 
         thread_pool.close()
         thread_pool.join()

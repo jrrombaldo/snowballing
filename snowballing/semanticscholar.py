@@ -5,6 +5,7 @@ import requests
 import torpy
 import os
 import json
+import traceback
 
 
 class Non200HTTPStatusCode(Exception):
@@ -18,10 +19,11 @@ class SemanticScholar(object):
     @retry(
         (Non200HTTPStatusCode, 
             requests.exceptions.ConnectionError, 
-            requests.exceptions.Timeout, 
+            requests.exceptions.Timeout,
             requests.exceptions.ConnectTimeout, 
             requests.exceptions.ReadTimeout,
-            torpy.circuit.CellTimeoutError),
+            torpy.circuit.CellTimeoutError,
+            torpy.circuit.CircuitExtendError,),
         delay=config["http"]["retry_delay"],
         tries=config["http"]["retry_attempts"],
     )
@@ -91,8 +93,7 @@ class SemanticScholar(object):
         log.debug(f"[API]\tmatch {'FOUND' if matched_paper else 'NOT FOUND'} within {result.get('total')} result(s) for {ris_paper['primary_title']}, id = {paper_id}")
         return paper_id
 
-    def extract_paper_details(self, paper_id, paper_title):
-        log.debug(f"extracting paper {paper_id}, {paper_title}")
+    def _extract_paper_details(self, paper_id, paper_title):
         paper_detail =  self.__http_request(
             config["API"]["paper"]["method"],
             config["API"]["paper"]["url"].format(
@@ -109,23 +110,22 @@ class SemanticScholar(object):
         log.debug(f"[details] {'FOUND' if paper_detail else 'NOT FOUND'} papers details for {paper_id}")
 
         return paper_detail
-
-        
+      
     def search_scholar_by_ris_paper(self, ris_paper):
         paper_id = paper_detail = None
+        try:
+            paper_id = self._search_paper_from_scholar_API(ris_paper)
+            if not paper_id:
+                paper_id = self._search_paper_from_scholar_website(ris_paper)
 
-        paper_id = self._search_paper_from_scholar_API(ris_paper)
-        if not paper_id:
-            paper_id = self._search_paper_from_scholar_website(ris_paper)
+            if not paper_id:
+                self._write_notfound_result(ris_paper.get("primary_title"))
+            else:
+                self._extract_paper_details(paper_id, ris_paper.get("primary_title"))
+        except:
+            self._write_error_result(ris_paper.get("primary_title"), None, f'When searching for: \n[{ris_paper}] \n encountered the following error:\n\n{traceback.format_exc()}')
 
-        if not paper_id:
-            self._write_notfound_result(ris_paper.get("primary_title"))
-        else:
-            self.extract_paper_details(paper_id, ris_paper.get("primary_title"))
-
-
-
-    def get_references_and_citations_to_snowball(self, paper_detail, direction):
+    def _get_references_and_citations_from_paper(self, paper_detail, direction):
         where_to_look = []
         if direction == 'both' or 'forward': where_to_look.append('citations')
         if direction == 'both' or 'forward': where_to_look.append('references') 
@@ -139,37 +139,36 @@ class SemanticScholar(object):
                     papers_to_snowball.append((ref.get('paperId'),ref.get('title') ))
         return papers_to_snowball
 
-
-
-    def get_extracted_papers_to_snowball(self, direction):
+    def get_references_and_citations_from_extracted_papers(self, direction):
         papers = []
         for paper_file in os.listdir(self._result_directory()):
             if paper_file.endswith(".json"):
                 with open(os.path.join(self._result_directory(),paper_file)) as json_paper:
-                    papers.extend(self.get_references_and_citations_to_snowball(json.load(json_paper), direction))
+                    papers.extend(self._get_references_and_citations_from_paper(json.load(json_paper), direction))
         
         return papers
 
-    
     def snowball(self, paper_id, paper_title, direction):
         log.debug(f'snowballing for {paper_id}, {paper_title}, direction = {direction}')
-        if paper_id == None:
-            self._write_notfound_result(paper_title)
-            return
+        try:
+            if paper_id == None:
+                self._write_notfound_result(paper_title)
+                return
 
-        if os.path.exists(os.path.join(self._result_directory(),f'{paper_id}.json')):
-            log.debug(f'already extracted -> {paper_id}, {paper_title}')
-            return
+            if os.path.exists(os.path.join(self._result_directory(),f'{paper_id}.json')):
+                log.debug(f'already extracted -> {paper_id}, {paper_title}')
+                return
 
-        paper_detail = self.extract_paper_details(paper_id, paper_title)
+            paper_detail = self._extract_paper_details(paper_id, paper_title)
 
-        if  paper_detail:
-            references = self.get_references_and_citations_to_snowball(paper_detail, direction)
-            log.debug(f'found {len(references)} references for {paper_id}, {paper_title}')
-        else:
-            return
-        
-
+            if  paper_detail:
+                references = self._get_references_and_citations_from_paper(paper_detail, direction)
+                log.debug(f'found {len(references)} references for {paper_id}, {paper_title}')
+            else:
+                return
+        except:
+            self._write_error_result(f'paperid = [{paper_id}], title = [{paper_title}]', None, f'encountered the following error on snowballing:\n\n{traceback.format_exc()}')
+    
     def _extract_author_name_from_fullname(self, author):
         if ", " in author:
             return author.split(", ")[0]
@@ -188,6 +187,10 @@ class SemanticScholar(object):
     def _write_notfound_result(self, paper_title):
         with open(f"{self._result_directory()}/not_found.txt", "a") as file:
             file.write(f"{paper_title}\r\n")
+    
+    def _write_error_result(self, paper_title, code = None, message = None):
+        with open(f"{self._result_directory()}/error.txt", "a") as file:
+            file.write(f"{paper_title} - {code if code else ''} - {message if message else ''}\r\n")
 
     def _write_found_result(self, paper_title, paper_details_json):
         with open(f"{self._result_directory()}/{paper_title.lower()}.json", "a") as file:
