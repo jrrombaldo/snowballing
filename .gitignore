@@ -5,3 +5,5 @@ results*
 *.pyc
 *.ris
 test.py
+dist
+build
