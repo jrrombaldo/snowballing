@@ -1,4 +1,4 @@
-name: 'Build Vinaries'
+name: 'Build Binaries'
 
 on:
   push:
