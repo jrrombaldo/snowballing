@@ -1,0 +1,36 @@
+name: 'Build Vinaries'
+
+on:
+  push:
+    branches:
+      - "*"
+  pull_request:
+    branches:
+      - "*"
+  
+jobs:
+  build-binaries:
+    runs-on: ${{matrix.os}}
+    strategy:
+      fail-fast: false
+      max-parallel: 10
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        python-version: [ '3.9s' ]
+        
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v3
+        with:
+          python-version: ${{ matrix.python-version }}
+          architecture: x64
+          cache: 'pip'
+      - run: pip install -r requirements.txt pyinstaller
+      - run: pyinstaller --onefile snowballing_app.py --name snowballing
+
+      - uses: actions/upload-artifact@v2
+        with:
+          path: dist/*
+
+    
+
