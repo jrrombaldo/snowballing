@@ -30,7 +30,7 @@ jobs:
 
       - uses: actions/upload-artifact@v3
         with:
-          name: binary-${{ matrix.os }}
+          name: binary-${{ $RUNNER_OS }}
           path: dist/*
 
 
@@ -70,6 +70,9 @@ jobs:
     steps:
       - name: downloading distributions
         uses: actions/download-artifact@v3
+        with:
+          name: binary-${{ $RUNNER_OS }}
+          path: ./snowballing-${{ $RUNNER_OS }}
 
       - name: Display structure of downloaded files
         run: ls -R
