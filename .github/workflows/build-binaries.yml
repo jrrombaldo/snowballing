@@ -28,19 +28,9 @@ jobs:
       - run: pip install -r requirements.txt pyinstaller
       - run: pyinstaller --onefile snowballing_app.py --name snowballing
       
-      - name: Rename binary per OS
-        run: |
-          cd dist
-          if [ "$RUNNER_OS" == "Linux" ]; then
-            mv snowballing snowballing-linux.sh
-          elif [ "$RUNNER_OS" == "Windows" ]; then
-            mv snowballing.exe snowballing.exe
-          elif [ "$RUNNER_OS" == "Mac" ]; then
-            mv snowballing snowballing-mac
-          elif
-            echo "$RUNNER_OS not supported"
-              exit 1
-          fi
+      - name: rename linux binary
+        if: matrix.os == 'ubuntu-latest'
+        run: mv dist/snowballing dist/snowballing.sh
 
       - uses: actions/upload-artifact@v3
         with:
@@ -76,7 +66,6 @@ jobs:
             If Pull Request:
             Head (PR)   = ${{ github.head_ref }}
             Base (PR)   = ${{ github.base_ref }}
-
 
   upload-artfeacts:
     runs-on: ubuntu-latest
