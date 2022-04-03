@@ -28,9 +28,52 @@ jobs:
       - run: pip install -r requirements.txt pyinstaller
       - run: pyinstaller --onefile snowballing_app.py --name snowballing
 
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3
         with:
+          name: binary-${{ matrix.os }}
           path: dist/*
+
+
+  create-release:
+    needs: [build-binaries]
+    - name: release
+      uses: actions/create-release@v1
+      id: create_release
+      with:
+        draft: false
+        prerelease: false
+        release_name: ${{ steps.version.outputs.version }}
+        # release_name: Release ${{ github.run_number }}
+        tag_name: ${{ github.ref }}
+        # tag_name: ${{ github.run_number }}
+        body: |
+          Workflow    = ${{ github.workflow }}
+          JobId       = ${{ github.job }}
+          Actor       = ${{ github.actor }}
+          Repo        = ${{ github.repository }}
+          Event       = ${{ github.event_name }}
+          Commit      = ${{ github.sha }}
+          Ref         = ${{ github.ref }}
+          If Pull Request:
+          Head (PR)   = ${{ github.head_ref }}
+          Base (PR)   = ${{ github.base_ref }}
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+      outputs:
+        release_url: ${{ steps.create_release.outputs.upload_url }}
+        release_id: ${{ steps.create_release.outputs.id }}
+
+
+  upload-artfeacts :
+    needs: [create-release]
+    steps:
+      - name: downloading distributions
+        uses: actions/download-artifact@v3
+
+      - name: Display structure of downloaded files
+        run: ls -R
+    
+
 
     
 
