@@ -27,10 +27,24 @@ jobs:
           cache: 'pip'
       - run: pip install -r requirements.txt pyinstaller
       - run: pyinstaller --onefile snowballing_app.py --name snowballing
+      
+      - name: Rename binary per OS
+        run: |
+          cd dist
+          if [ "$RUNNER_OS" == "Linux" ]; then
+            mv snowballing snowballing-linux.sh
+          elif [ "$RUNNER_OS" == "Windows" ]; then
+            mv snowballing.exe snowballing.exe
+          elif [ "$RUNNER_OS" == "Mac" ]; then
+            mv snowballing snowballing-mac
+          elif
+            echo "$RUNNER_OS not supported"
+              exit 1
+          fi
 
       - uses: actions/upload-artifact@v3
         with:
-          name: binary-${{ matrix.os }}
+          name: binaries
           path: dist/*
 
 
@@ -73,6 +87,9 @@ jobs:
 
       - name: Display structure of downloaded files
         run: ls -R
+        
+
+        
     
 
 
