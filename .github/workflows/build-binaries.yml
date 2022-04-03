@@ -70,6 +70,8 @@ jobs:
   upload-artfeacts:
     runs-on: ubuntu-latest
     needs: [create-release]
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - name: downloading distributions
         uses: actions/download-artifact@v3
