@@ -1,3 +1,4 @@
+# from contextlib import contextmanager
 import threading
 import traceback
 
@@ -14,13 +15,13 @@ def get_internet_ip_addr(http_session):
     return http_session.get(config["http"]["internet_ip_url"]).text
 
 # @retry(Exception, delay=0, tries=15)
-# def get_tor_session():
-#     """return a working HTTP session and its internet IP address"""
+def get_tor_session():
+    """return a working HTTP session and its internet IP address"""
+    log.debug("launching a tor session ....")
 
-#     with tor_requests_session() as tor_session:
-#         threading.current_thread().name = get_internet_ip_addr(tor_session)
-#         yield tor_session
-
+    with tor_requests_session() as tor_session:
+        threading.current_thread().name = get_internet_ip_addr(tor_session)
+        return tor_session
 
 
 def snowball_task(paper_id, paper_title, thread_pool, curr_depth, max_depth, direction, use_tor):
@@ -29,6 +30,8 @@ def snowball_task(paper_id, paper_title, thread_pool, curr_depth, max_depth, dir
         references = None
 
         if use_tor:
+            # references = SemanticScholar(get_tor_session()).snowball(paper_id, paper_title, direction)
+            log.debug("launching a tor session for snowballing ....")
             with tor_requests_session() as tor_session:
                 threading.current_thread().name = get_internet_ip_addr(tor_session)
                 references = SemanticScholar(tor_session).snowball(paper_id, paper_title, direction)
@@ -62,13 +65,12 @@ def lookup_bibliography_metadata(ris_papers, num_threads, use_tor):
         #  searching for RIS papers
         for paper in ris_papers:
             thread_pool.apply_async(
-                search_paper_task, (paper, use_tor)
-            ).get(timeout=config['threadpool_thread_timeout'])
+                search_paper_task, (paper, use_tor, )
+            )
+            # .get(timeout=config['threadpool_thread_timeout'])
         
         thread_pool.close()
         thread_pool.join()
-        print (thread_pool)
-
 
 def snowball_papers(num_threads, use_tor, direction, depth):
     with ThreadPool(num_threads) as thread_pool:
@@ -76,8 +78,11 @@ def snowball_papers(num_threads, use_tor, direction, depth):
         for paper_tuple in SemanticScholar().get_references_and_citations_from_extracted_papers(direction):
             thread_pool.apply_async(
                 snowball_task, (paper_tuple[0], paper_tuple[1], thread_pool, 0, depth, direction, use_tor)
-            ).get(timeout=config['threadpool_thread_timeout'])
+            )
+            # .get(timeout=config['threadpool_thread_timeout'])
 
         thread_pool.close()
         thread_pool.join()
+
+
 

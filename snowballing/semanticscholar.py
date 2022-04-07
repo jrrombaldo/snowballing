@@ -181,14 +181,18 @@ class SemanticScholar(object):
     def _write_notfound_result(self, paper_title):
         with open(f"{config['results_dir']}{os.sep}{config['result_not_found_file']}", "a") as file:
             file.write(f"{paper_title.strip()}\r\n\r\n")
+            file.close()
     
     def _write_error_result(self, paper_title, code = None, message = None):
         with open(f"{config['results_dir']}{os.sep}{config['result_error_file']}", "a") as file:
-            file.write(f"{paper_title} - {code if code else ''} - {message if message else ''}\r\n")
+            file.write(f"{paper_title} - {code if code else ''} - {message if message else ''}")
+            file.write('\r\n'*5)
+            file.close()
 
     def _write_found_result(self, paper_title, paper_details_json):
         with open(f"{config['results_dir']}{os.sep}{paper_title.lower()}.json", "a") as file:
             file.write(json.dumps(paper_details_json, indent=4, sort_keys=True))
+            file.close()
 
     def parse_extracted_papers_into_ris(self):
         for paper_file in os.listdir(config['results_dir']):
