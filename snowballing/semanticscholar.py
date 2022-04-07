@@ -141,9 +141,9 @@ class SemanticScholar(object):
 
     def get_references_and_citations_from_extracted_papers(self, direction):
         papers = []
-        for paper_file in os.listdir(self._result_directory()):
+        for paper_file in os.listdir(config['results_dir']):
             if paper_file.endswith(".json"):
-                with open(os.path.join(self._result_directory(),paper_file)) as json_paper:
+                with open(os.path.join(config['results_dir'],paper_file)) as json_paper:
                     papers.extend(self._get_references_and_citations_from_paper(json.load(json_paper), direction))
         
         return papers
@@ -155,7 +155,7 @@ class SemanticScholar(object):
                 self._write_notfound_result(paper_title)
                 return
 
-            if os.path.exists(os.path.join(self._result_directory(),f'{paper_id}.json')):
+            if os.path.exists(os.path.join(config['results_dir'],f'{paper_id}.json')):
                 log.debug(f'already extracted -> {paper_id}, {paper_title}')
                 return
 
@@ -168,7 +168,7 @@ class SemanticScholar(object):
                 return
         except:
             self._write_error_result(f'paperid = [{paper_id}], title = [{paper_title}]', None, f'encountered the following error on snowballing:\n\n{traceback.format_exc()}')
-    
+
     def _extract_author_name_from_fullname(self, author):
         if ", " in author:
             return author.split(", ")[0]
@@ -178,23 +178,21 @@ class SemanticScholar(object):
     def _extract_authors_surname_from_ris_authors(self, authors):
         return [self._extract_author_name_from_fullname(author) for author in authors]
 
-    def _result_directory(self):
-        result_dir = "./results"
-        if not os.path.exists(result_dir):
-            os.makedirs(result_dir)
-        return result_dir
-
     def _write_notfound_result(self, paper_title):
-        with open(f"{self._result_directory()}/not_found.txt", "a") as file:
-            file.write(f"{paper_title}\r\n")
+        with open(f"{config['results_dir']}{os.sep}{config['result_not_found_file']}", "a") as file:
+            file.write(f"{paper_title.strip()}\r\n\r\n")
     
     def _write_error_result(self, paper_title, code = None, message = None):
-        with open(f"{self._result_directory()}/error.txt", "a") as file:
+        with open(f"{config['results_dir']}{os.sep}{config['result_error_file']}", "a") as file:
             file.write(f"{paper_title} - {code if code else ''} - {message if message else ''}\r\n")
 
     def _write_found_result(self, paper_title, paper_details_json):
-        with open(f"{self._result_directory()}/{paper_title.lower()}.json", "a") as file:
+        with open(f"{config['results_dir']}{os.sep}{paper_title.lower()}.json", "a") as file:
             file.write(json.dumps(paper_details_json, indent=4, sort_keys=True))
 
-
-
+    def parse_extracted_papers_into_ris(self):
+        for paper_file in os.listdir(config['results_dir']):
+            if paper_file.endswith(".json"):
+                with open(os.path.join(config['results_dir'],paper_file)) as json_paper:
+                    # TODO implement this ...
+                    print ('not there yet')

@@ -39,9 +39,9 @@
             "venues": []
         }
     },
-    "results":{
-        "dir":"./results"
-    },
+    "results_dir":"./results",
+    "result_not_found_file": "./NOT_FOUND.txt",
+    "result_error_file": "./NOT_FOUND.txt",
     "threadpool_default_size":75,
     "threadpool_thread_timeout":9000
 }
