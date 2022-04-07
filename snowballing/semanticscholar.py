@@ -105,7 +105,7 @@ class SemanticScholar(object):
             self._write_found_result(paper_id, paper_detail)
         else:
             log.error(f'[details] Paper NOT FOUND {paper_id}')
-            self._write_notfound_result(paper_title)
+            self._write_notfound_result(f"[DETAIL_API]\t{paper_title}")
 
         log.debug(f"[details] {'FOUND' if paper_detail else 'NOT FOUND'} papers details for {paper_id}")
 
@@ -119,7 +119,7 @@ class SemanticScholar(object):
                 paper_id = self._search_paper_from_scholar_website(ris_paper)
 
             if not paper_id:
-                self._write_notfound_result(ris_paper.get("primary_title"))
+                self._write_notfound_result(f'[SEARCH_API]\t{ris_paper.get("primary_title")}')
             else:
                 self._extract_paper_details(paper_id, ris_paper.get("primary_title"))
         except:
@@ -134,7 +134,7 @@ class SemanticScholar(object):
         for look_at in where_to_look:
             for ref in paper_detail.get(look_at):
                 if not ref.get('paperId'): 
-                    self._write_notfound_result(ref.get('title'))
+                    self._write_notfound_result(f"[REFERENCES]\t{ref.get('title')}")
                 else:
                     papers_to_snowball.append((ref.get('paperId'),ref.get('title') ))
         return papers_to_snowball
@@ -152,7 +152,7 @@ class SemanticScholar(object):
         log.debug(f'snowballing for {paper_id}, {paper_title}, direction = {direction}')
         try:
             if paper_id == None:
-                self._write_notfound_result(paper_title)
+                self._write_notfound_result(f'[SNOWBALLING]\t{paper_title}')
                 return
 
             if os.path.exists(os.path.join(config['results_dir'],f'{paper_id}.json')):
