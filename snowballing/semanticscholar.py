@@ -1,5 +1,6 @@
 from snowballing.config import config
 from snowballing.logging import log
+from snowballing import database
 from retry import retry
 import requests
 import torpy
@@ -101,11 +102,18 @@ class SemanticScholar(object):
                 fields_to_return=config["API"]["paper"]["fields_to_return"],
             ),
         )
-        if  paper_detail:
-            self._write_found_result(paper_id, paper_detail)
-        else:
-            log.error(f'[details] Paper NOT FOUND {paper_id}')
-            self._write_notfound_result(f"[DETAIL_API]\t{paper_title}")
+        # if  paper_detail:
+        #     # self._write_found_result(paper_id, paper_detail)
+        #     database.save_paper()
+        # else:
+        #     log.error(f'[details] Paper NOT FOUND {paper_id}')
+        #     self._write_notfound_result(paper_title)
+
+        # if  paper_detail:
+        #     self._write_found_result(paper_id, paper_detail)
+        # else:
+        #     log.error(f'[details] Paper NOT FOUND {paper_id}')
+        #     self._write_notfound_result(f"[DETAIL_API]\t{paper_title}")
 
         log.debug(f"[details] {'FOUND' if paper_detail else 'NOT FOUND'} papers details for {paper_id}")
 
@@ -119,9 +127,14 @@ class SemanticScholar(object):
                 paper_id = self._search_paper_from_scholar_website(ris_paper)
 
             if not paper_id:
-                self._write_notfound_result(f'[SEARCH_API]\t{ris_paper.get("primary_title")}')
+                database.save_paper_not_found(ris_paper)
+                #  self._write_notfound_result(f'[SEARCH_API]\t{ris_paper.get("primary_title")}')
             else:
-                self._extract_paper_details(paper_id, ris_paper.get("primary_title"))
+                paper_detail = self._extract_paper_details(paper_id, ris_paper.get("primary_title"))
+                if paper_detail:
+                    database.save_paper(paper_id,ris_paper.get("primary_title"), ris_paper, paper_detail, 'RIS', 'FOUND')
+                else:
+                    database.save_paper_details_not_found(ris_paper.get("primary_title"), 'RIS', ris_paper)
         except:
             self._write_error_result(ris_paper.get("primary_title"), None, f'When searching for: \n[{ris_paper}] \n encountered the following error:\n\n{traceback.format_exc()}')
 
@@ -150,25 +163,26 @@ class SemanticScholar(object):
         return papers
 
     def snowball(self, paper_id, paper_title, direction):
-        log.debug(f'snowballing for {paper_id}, {paper_title}, direction = {direction}')
-        try:
-            if paper_id == None:
-                self._write_notfound_result(f'[SNOWBALLING]\t{paper_title}')
-                return
+        pass
+        # log.debug(f'snowballing for {paper_id}, {paper_title}, direction = {direction}')
+        # try:
+        #     if paper_id == None:
+        #         self._write_notfound_result(f'[SNOWBALLING]\t{paper_title}')
+        #         return
 
-            if os.path.exists(os.path.join(config['results_dir'],f'{paper_id}.json')):
-                log.debug(f'already extracted -> {paper_id}, {paper_title}')
-                return
+        #     if os.path.exists(os.path.join(config['results_dir'],f'{paper_id}.json')):
+        #         log.debug(f'already extracted -> {paper_id}, {paper_title}')
+        #         return
 
-            paper_detail = self._extract_paper_details(paper_id, paper_title)
+        #     paper_detail = self._extract_paper_details(paper_id, paper_title)
 
-            if  paper_detail:
-                references = self._get_references_and_citations_from_paper(paper_detail, direction)
-                log.debug(f'found {len(references)} references for {paper_id}, {paper_title}')
-            else:
-                return
-        except:
-            self._write_error_result(f'paperid = [{paper_id}], title = [{paper_title}]', None, f'encountered the following error on snowballing:\n\n{traceback.format_exc()}')
+        #     if  paper_detail:
+        #         references = self._get_references_and_citations_from_paper(paper_detail, direction)
+        #         log.debug(f'found {len(references)} references for {paper_id}, {paper_title}')
+        #     else:
+        #         return
+        # except:
+        #     self._write_error_result(f'paperid = [{paper_id}], title = [{paper_title}]', None, f'encountered the following error on snowballing:\n\n{traceback.format_exc()}')
 
     def _extract_author_name_from_fullname(self, author):
         if ", " in author:
