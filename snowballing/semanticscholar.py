@@ -58,7 +58,7 @@ class SemanticScholar(object):
         if http_result.get("totalResults") and http_result.get("totalResults") > 0:
             paper_id =  http_result.get("results")[0].get("id")
 
-        log.debug(f"[WEB]\tmatch {'FOUND' if paper_id else 'NOT FOUND'} within {http_result.get('totalResults')} result(s) for {ris_paper['primary_title']}, id = {paper_id}")
+        log.debug(f"[WEB_SEARCH]\tmatch {'FOUND' if paper_id else 'NOT FOUND'} within {http_result.get('totalResults')} result(s), id = {paper_id}")
         return paper_id
 
     def _search_paper_from_scholar_API(self, ris_paper):
@@ -91,7 +91,7 @@ class SemanticScholar(object):
         paper_id = None
         if matched_paper: paper_id = matched_paper.get("paperId")
 
-        log.debug(f"[API]\tmatch {'FOUND' if matched_paper else 'NOT FOUND'} within {result.get('total')} result(s) for {ris_paper['primary_title']}, id = {paper_id}")
+        log.debug(f"[SEACRH_API]\tmatch {'FOUND' if matched_paper else 'NOT FOUND'} within {result.get('total')} result(s), id = {paper_id}")
         return paper_id
 
     def _extract_paper_details(self, paper_id, paper_title):
@@ -115,8 +115,7 @@ class SemanticScholar(object):
         #     log.error(f'[details] Paper NOT FOUND {paper_id}')
         #     self._write_notfound_result(f"[DETAIL_API]\t{paper_title}")
 
-        log.debug(f"[details] {'FOUND' if paper_detail else 'NOT FOUND'} papers details for {paper_id}")
-
+        log.debug(f"[PAPER_API] {'FOUND' if paper_detail else 'NOT FOUND'} paper for {paper_id}")
         return paper_detail
       
     def search_scholar_by_ris_paper(self, ris_paper):

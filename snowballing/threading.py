@@ -17,7 +17,6 @@ def get_internet_ip_addr(http_session):
 
 
 @contextmanager
-
 @retry(Exception, delay=15, tries=10)
 def get_tor_session():
     """return a working HTTP session and its internet IP address"""
@@ -37,7 +36,6 @@ def snowball_task(paper_id, paper_title, thread_pool, curr_depth, max_depth, dir
 
         if use_tor:
             with get_tor_session() as tor_session:
-                # threading.current_thread().name = get_internet_ip_addr(tor_session)
                 references = SemanticScholar(tor_session).snowball(paper_id, paper_title, direction)
         else:
             references = SemanticScholar().snowball(paper_id, paper_title, direction)
@@ -55,9 +53,9 @@ def search_paper_task(ris_paper, use_tor):
     try:
         if use_tor:
             with get_tor_session() as tor_session:
-                # threading.current_thread().name = get_internet_ip_addr(tor_session)
                 SemanticScholar(tor_session).search_scholar_by_ris_paper(ris_paper)
         else:
+            threading.current_thread().name = f'{ris_paper.get("primary_title")[:80]:80}'
             SemanticScholar().search_scholar_by_ris_paper(ris_paper)
     except Exception:
         log.error(f"something went wrong with paper {ris_paper}, resulting at following error:\n{traceback.format_exc()}")

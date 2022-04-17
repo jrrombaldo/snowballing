@@ -2,6 +2,7 @@ import sqlite3
 import os
 import json
 from snowballing.config import config
+from snowballing.logging import log
 
 
 def prepare_db():
@@ -16,6 +17,10 @@ def prepare_db():
 
 
 def save_paper(paper_id, title, ris_paper, scholar_paper, source, status = None):
+    if  already_exist(paper_id):
+        log.error(f'paper already exist, not savaing -> {title}')
+        pass
+
     sql = 'insert into papers (id, title, ris, paper, source, stat) values (?, ? ,?, ?, ?, ?)'
     params  = [paper_id, 
         title, 
