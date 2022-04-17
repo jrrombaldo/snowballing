@@ -140,6 +140,7 @@ class SemanticScholar(object):
         return papers_to_snowball
 
     def get_references_and_citations_from_extracted_papers(self, direction):
+        # TODO handle exceptions here.
         papers = []
         for paper_file in os.listdir(config['results_dir']):
             if paper_file.endswith(".json"):
@@ -180,7 +181,7 @@ class SemanticScholar(object):
 
     def _write_notfound_result(self, paper_title):
         with open(f"{config['results_dir']}{os.sep}{config['result_not_found_file']}", "a") as file:
-            file.write(f"{paper_title.strip()}\r\n\r\n")
+            file.write(f"{paper_title.strip()}")
             file.close()
     
     def _write_error_result(self, paper_title, code = None, message = None):

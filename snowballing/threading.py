@@ -18,7 +18,7 @@ def get_internet_ip_addr(http_session):
 
 @contextmanager
 
-@retry(Exception, delay=0, tries=5)
+@retry(Exception, delay=15, tries=10)
 def get_tor_session():
     """return a working HTTP session and its internet IP address"""
     log.debug("establishing TOR circuit ...")
