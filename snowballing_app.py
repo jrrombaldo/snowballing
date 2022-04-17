@@ -74,6 +74,5 @@ if __name__ == "__main__":
     log.info("snowballing extracted papers")
     threading.snowball_papers(args.threads, args.tor, args.direction, args.depth)
 
-    # adjust_not_found_file()
 
     # TODO, bring error function to this class, so it encorporates papers from threads that could not establish a cirtuit.

@@ -1,6 +1,6 @@
 {
     "logging": {
-        "format": "%(asctime)-27s %(levelname)-7s  %(threadName)-17s -  %(message)s",
+        "format": "%(asctime)-27s %(levelname)-7s  [%(threadName)s] -  %(message)s",
         "log-file": "./snowballing.log",
         "level": "DEBUG"
     },
@@ -8,7 +8,8 @@
         "cert_validation": true,
         "proxies": null,
         "headers": {
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
+            "x-api-key":""
         },
         "retry_delay": 90,
         "retry_attempts": 7,
@@ -43,5 +44,6 @@
     "result_not_found_file": "NOT_FOUND.txt",
     "result_error_file": "ERROR.txt",
     "threadpool_default_size":75,
-    "threadpool_thread_timeout":9000
+    "threadpool_thread_timeout":9000,
+    "db_file": "papers.sqlite"
 }

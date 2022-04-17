@@ -38,12 +38,13 @@ def snowball_task(paper_id, paper_title, thread_pool, curr_depth, max_depth, dir
             with get_tor_session() as tor_session:
                 references = SemanticScholar(tor_session).snowball(paper_id, paper_title, direction)
         else:
+            threading.current_thread().name = f'{paper_title[:80]:80}'
             references = SemanticScholar().snowball(paper_id, paper_title, direction)
 
-        if references:
-            for paper_tuple in references:
-                thread_pool.apply_async(snowball_task, (paper_tuple[0], paper_tuple[1], thread_pool, curr_depth+1, max_depth, direction, use_tor))
-        return
+        # if references:
+        #     for paper_tuple in references:
+        #         thread_pool.apply_async(snowball_task, (paper_tuple[0], paper_tuple[1], thread_pool, curr_depth+1, max_depth, direction, use_tor))
+        # return
 
     except Exception:
         log.error(f"something went wrong with paper_id {paper_id} and title {paper_title}, resulting at following error:\n{traceback.format_exc()}")

@@ -126,7 +126,7 @@ class SemanticScholar(object):
                 paper_id = self._search_paper_from_scholar_website(ris_paper)
 
             if not paper_id:
-                database.save_paper_not_found(ris_paper)
+                database.save_paper_not_found_from_ris(ris_paper)
                 #  self._write_notfound_result(f'[SEARCH_API]\t{ris_paper.get("primary_title")}')
             else:
                 paper_detail = self._extract_paper_details(paper_id, ris_paper.get("primary_title"))
@@ -152,36 +152,37 @@ class SemanticScholar(object):
         return papers_to_snowball
 
     def get_references_and_citations_from_extracted_papers(self, direction):
-        # TODO handle exceptions here.
-        papers = []
-        for paper_file in os.listdir(config['results_dir']):
-            if paper_file.endswith(".json"):
-                with open(os.path.join(config['results_dir'],paper_file)) as json_paper:
-                    papers.extend(self._get_references_and_citations_from_paper(json.load(json_paper), direction))
-        
-        return papers
+        papers_snowball = []
+        for paper in database.get_all_papers():
+            if paper:
+                papers_snowball.extend(self._get_references_and_citations_from_paper(paper, direction))
+        return papers_snowball
+    
 
     def snowball(self, paper_id, paper_title, direction):
-        pass
         # log.debug(f'snowballing for {paper_id}, {paper_title}, direction = {direction}')
-        # try:
-        #     if paper_id == None:
-        #         self._write_notfound_result(f'[SNOWBALLING]\t{paper_title}')
-        #         return
+        try:
+            if paper_id == None:
+                # self._write_notfound_result(f'[SNOWBALLING]\t{paper_title}')
+                database.save_paper_not_found_from_snowballing(paper_title)
+                return
 
-        #     if os.path.exists(os.path.join(config['results_dir'],f'{paper_id}.json')):
-        #         log.debug(f'already extracted -> {paper_id}, {paper_title}')
-        #         return
+            if database.already_exist(paper_id):
+                log.debug(f'[SNOWBALLING] already extracted -> {paper_id}, {paper_title}')
+                return
 
-        #     paper_detail = self._extract_paper_details(paper_id, paper_title)
+            paper_detail = self._extract_paper_details(paper_id, paper_title)
 
-        #     if  paper_detail:
-        #         references = self._get_references_and_citations_from_paper(paper_detail, direction)
-        #         log.debug(f'found {len(references)} references for {paper_id}, {paper_title}')
-        #     else:
-        #         return
-        # except:
-        #     self._write_error_result(f'paperid = [{paper_id}], title = [{paper_title}]', None, f'encountered the following error on snowballing:\n\n{traceback.format_exc()}')
+            if  paper_detail:
+                database.save_paper(paper_id, paper_title, None, paper_detail, 'SB', 'FOUND')
+                references = self._get_references_and_citations_from_paper(paper_detail, direction)
+                log.debug(f'[SNOWBALLING] found {len(references)} references for {paper_title}, {paper_id}')
+                return references
+            else:
+                database.save_paper_details_not_found(paper_title, 'SB', None, paper_id)
+                return
+        except:
+            self._write_error_result(f'paperid = [{paper_id}], title = [{paper_title}]', None, f'encountered the following error on snowballing:\n\n{traceback.format_exc()}')
 
     def _extract_author_name_from_fullname(self, author):
         if ", " in author:

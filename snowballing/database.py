@@ -34,11 +34,17 @@ def save_paper(paper_id, title, ris_paper, scholar_paper, source, status = None)
     conn.commit()
     conn.close()
 
-def save_paper_not_found(ris_paper):
+def save_paper_not_found_from_ris(ris_paper):
     save_paper(None, ris_paper.get("primary_title"), ris_paper, None, 'RIS', 'NOT_FOUND')
 
-def save_paper_details_not_found(title, source, ris=None):
-    save_paper(None, title, ris, None, source, 'DETAILS_NOT_FOUND')
+def save_paper_not_found_from_snowballing(paper_title):
+    save_paper(None, paper_title, None, None, 'SB', 'NOT_FOUND')
+
+def save_paper_not_found_from_ris(ris_paper):
+    save_paper(None, ris_paper.get("primary_title"), ris_paper, None, 'RIS', 'NOT_FOUND')
+
+def save_paper_details_not_found(title, source, ris=None, paper_id=None):
+    save_paper(paper_id, title, ris, None, source, 'DETAILS_NOT_FOUND')
 
 
 def already_exist(paper_id):
@@ -51,38 +57,13 @@ def already_exist(paper_id):
     return found 
 
 
+def get_all_papers():
+    sql = 'SELECT paper FROM papers WHERE paper is not null'
+    conn =  prepare_db()
+    # conn.row_factory = lambda cursor, row: row[0]
+    cur = conn.cursor()
+    result = cur.execute(sql)
+    results = [json.loads(paper[0]) for paper in result.fetchall()]
+    conn.close()
+    return results
 
-
-    
-
-
-
-
-
-
-
-import rispy
-def get_papers_from_ris(ris_file):
-    return rispy.load(ris_file, skip_unknown_tags=False)
-
-
-print (already_exist("no_id"))
-print (already_exist('blad'))
-print (already_exist(None))
-
-
-# for paper in get_papers_from_ris(open('./scoped.ris')):
-#     save_article(
-#         "no_id",
-#         paper.get("primary_title"),
-#         paper,
-#         None,
-#         "RIS",
-#         'FOUND'
-#     )
-
-
-# conn =  prepare_db()
-# cur = conn.cursor()
-# cur.execute('select * from papers');
-# print (cur.arraysize)
