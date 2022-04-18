@@ -51,12 +51,12 @@ if __name__ == "__main__":
 
     if args.script == 'lookup':
         log.info("Searching for papers bibliography")
-        threading.lookup_bibliography_metadata(
+        threading.paper_metadata_lookup(
             get_papers_from_ris(args.ris_file),args.threads, args.tor)
 
     if args.script == 'snowballing':
         log.info("Snowballing encountered papers")
-        threading.snowball_papers(args.threads, args.tor, 'both', 1)
+        threading.paper_snowball(args.threads, args.tor, 'both', 1)
 
     if args.script == 'summary':
         database.get_summary()

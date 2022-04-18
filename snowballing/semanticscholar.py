@@ -160,7 +160,7 @@ class SemanticScholar(object):
         return database.get_next_snowball_set()
     
 
-    def snowball(self, paper_id, paper_title, direction):
+    def snowball(self, paper_id, paper_title):
         try:
             if paper_id == None:
                 database.save_paper_not_found_from_snowballing(paper_title)

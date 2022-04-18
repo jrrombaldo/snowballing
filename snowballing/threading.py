@@ -29,45 +29,32 @@ def get_tor_session():
         yield tor_session
 
 
-def snowball_task(paper_id, paper_title, direction, use_tor):
+def task_execution (func_name, func_args, paper_title, use_tor):
     try:
         if use_tor:
             with get_tor_session() as tor_session:
-                references = SemanticScholar(tor_session).snowball(paper_id, paper_title, direction)
+                getattr(SemanticScholar(), func_name)(*func_args)
         else:
             threading.current_thread().name = f'{paper_title[:80]:80}'
-            references = SemanticScholar().snowball(paper_id, paper_title, direction)
-
+            getattr(SemanticScholar(), func_name)(*func_args)
 
     except Exception:
-        log.error(f"something went wrong with paper_id {paper_id} and title {paper_title}, resulting at following error:\n{traceback.format_exc()}")
+        log.error(f"SOMETHING WENT WRONG ON [{func_name}] with parameters [{func_args}], resulting at:\n{traceback.format_exc()}")
 
-
-def search_paper_task(ris_paper, use_tor):
-    try:
-        if use_tor:
-            with get_tor_session() as tor_session:
-                SemanticScholar(tor_session).search_scholar_by_ris_paper(ris_paper)
-        else:
-            threading.current_thread().name = f'{ris_paper.get("primary_title")[:80]:80}'
-            SemanticScholar().search_scholar_by_ris_paper(ris_paper)
-    except Exception:
-        log.error(f"something went wrong with paper {ris_paper}, resulting at following error:\n{traceback.format_exc()}")
 
  
 
-def lookup_bibliography_metadata(ris_papers, num_threads, use_tor):
+def paper_metadata_lookup(ris_papers, num_threads, use_tor):
     with ThreadPool(num_threads) as thread_pool:
-        #  searching for RIS papers
         for paper in ris_papers:
-            thread_pool.apply_async(
-                search_paper_task, (paper, use_tor, )
-            )
+            task_args = ('search_scholar_by_ris_paper', [paper], paper.get('primary_title'), use_tor,)
+            thread_pool.apply_async(task_execution, args=task_args)
         
         thread_pool.close()
         thread_pool.join()
 
-def snowball_papers(num_threads, use_tor, direction, depth):
+
+def paper_snowball(num_threads, use_tor, direction, depth):
     with ThreadPool(num_threads) as thread_pool:
 
         for iter in range (0, depth):
@@ -76,9 +63,9 @@ def snowball_papers(num_threads, use_tor, direction, depth):
             log.info(f'performing snowballing iteraction {iter} of {depth} on direction {direction}. Papers found {len(papers)}')
 
             for paper_tuple in papers:
-                thread_pool.apply_async(
-                    snowball_task, (paper_tuple[0], paper_tuple[1], direction, use_tor,)
-                )
+                task_args = ('snowball', [paper_tuple[0], paper_tuple[1]], paper_tuple[1], use_tor,)
+                thread_pool.apply_async(task_execution, args=task_args)
+
             thread_pool.close()
             thread_pool.join()
 
