@@ -59,11 +59,11 @@ def paper_snowball(num_threads, use_tor, direction, depth):
 
         for iter in range (0, depth):
             
-            papers = SemanticScholar().get_references_and_citations_from_extracted_papers(direction)
+            papers = SemanticScholar().get_papers_for_snowballing(direction)
             log.info(f'performing snowballing iteraction {iter} of {depth} on direction {direction}. Papers found {len(papers)}')
 
             for paper_tuple in papers:
-                task_args = ('snowball', [paper_tuple[0], paper_tuple[1]], paper_tuple[1], use_tor,)
+                task_args = ('snowballing', [paper_tuple[0], paper_tuple[1]], paper_tuple[1], use_tor,)
                 thread_pool.apply_async(task_execution, args=task_args)
 
             thread_pool.close()

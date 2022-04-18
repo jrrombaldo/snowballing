@@ -102,18 +102,6 @@ class SemanticScholar(object):
                 fields_to_return=config["API"]["paper"]["fields_to_return"],
             ),
         )
-        # if  paper_detail:
-        #     # self._write_found_result(paper_id, paper_detail)
-        #     database.save_paper()
-        # else:
-        #     log.error(f'[details] Paper NOT FOUND {paper_id}')
-        #     self._write_notfound_result(paper_title)
-
-        # if  paper_detail:
-        #     self._write_found_result(paper_id, paper_detail)
-        # else:
-        #     log.error(f'[details] Paper NOT FOUND {paper_id}')
-        #     self._write_notfound_result(f"[DETAIL_API]\t{paper_title}")
 
         log.debug(f"[PAPER_API] {'FOUND' if paper_detail else 'NOT FOUND'} paper for {paper_id}")
         return paper_detail
@@ -137,30 +125,12 @@ class SemanticScholar(object):
         except:
             log.error(f'something went wrong when searching for: \n[{ris_paper}] \n encountered the following error:\n\n{traceback.format_exc()}')
     
-    # def _get_references_and_citations_from_paper(self, paper_detail, direction):
-    # #     where_to_look = []
-    # #     if direction == 'both' or 'forward': where_to_look.append('citations')
-    # #     if direction == 'both' or 'forward': where_to_look.append('references') 
-        
-    # #     papers_to_snowball = []
-    # #     for look_at in where_to_look:
-    # #         for ref in paper_detail.get(look_at):
-    # #             if not ref.get('paperId'): 
-    # #                 database.save_paper_not_found_from_snowballing(ref.get('title'))
-    # #             else:
-    # #                 papers_to_snowball.append((ref.get('paperId'),ref.get('title') ))
-    # #     return papers_to_snowball
 
-    def get_references_and_citations_from_extracted_papers(self, direction):
-    #     papers_snowball = []
-    #     for paper in database.get_all_papers():
-    #         if paper:
-    #             papers_snowball.extend(self._get_references_and_citations_from_paper(paper, direction))
-    #     return papers_snowball
+    def get_papers_for_snowballing(self, direction):
         return database.get_next_snowball_set()
     
 
-    def snowball(self, paper_id, paper_title):
+    def snowballing(self, paper_id, paper_title):
         try:
             if paper_id == None:
                 database.save_paper_not_found_from_snowballing(paper_title)
@@ -189,26 +159,3 @@ class SemanticScholar(object):
 
     def _extract_authors_surname_from_ris_authors(self, authors):
         return [self._extract_author_name_from_fullname(author) for author in authors]
-
-    # def _write_notfound_result(self, paper_title):
-    #     with open(f"{config['results_dir']}{os.sep}{config['result_not_found_file']}", "a") as file:
-    #         file.write(f"{paper_title.strip()}")
-    #         file.close()
-    
-    # def _write_error_result(self, paper_title, code = None, message = None):
-    #     with open(f"{config['results_dir']}{os.sep}{config['result_error_file']}", "a") as file:
-    #         file.write(f"{paper_title} - {code if code else ''} - {message if message else ''}")
-    #         file.write('\r\n'*5)
-    #         file.close()
-
-    # def _write_found_result(self, paper_title, paper_details_json):
-    #     with open(f"{config['results_dir']}{os.sep}{paper_title.lower()}.json", "a") as file:
-    #         file.write(json.dumps(paper_details_json, indent=4, sort_keys=True))
-    #         file.close()
-
-    # def parse_extracted_papers_into_ris(self):
-    #     for paper_file in os.listdir(config['results_dir']):
-    #         if paper_file.endswith(".json"):
-    #             with open(os.path.join(config['results_dir'],paper_file)) as json_paper:
-    #                 # TODO implement this ...
-    #                 print ('not there yet')
