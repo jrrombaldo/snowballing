@@ -79,27 +79,26 @@ def get_next_snowball_set():
 def get_summary():
     conn =  prepare_db()
     cur = conn.cursor()
+
+
+    result = cur.execute("SELECT stat, count (*) FROM papers WHERE source ='RIS' GROUP BY stat ORDER BY 1").fetchall()
+    if result: 
+        for item in result:
+            print (f'\r\n\tBibliography {item[0]} = {item[1]}')
+
     result = cur.execute('SELECT sum(reference) AS total_references, sum(citations) as total_citations FROM snowballing').fetchone()
     total_references = result[0]
     total_citations = result[1]
+    print (f'\r\n\treferences\t= {total_references}\r\n\tcitations\t= {total_citations}')
 
     result = cur.execute("SELECT stat, count (*) FROM papers WHERE source ='SB' GROUP BY stat ORDER BY 1").fetchall()
-    snowballing_found = result[0][1]
-    snowballing_not_found = result[1][1]
-
-    result = cur.execute("SELECT stat, count (*) FROM papers WHERE source ='RIS' GROUP BY stat ORDER BY 1").fetchall()
-    ris_found = result[0][1]
-    ris_not_found = result[1][1]
-
-    log.info(f"\
-            \r\n\tpaper found \t\t= {ris_found}\
-            \r\n\tpapers NOT found \t= {ris_not_found} \
-            \r\n\treferences \t\t= {total_references}\
-            \r\n\tcitations \t\t= {total_citations}\
-            \r\n\tsnowballing found \t= {snowballing_found}\
-            \r\n\tsnowballing NOT found \t= {snowballing_not_found}\r\n")
+    if result: 
+        for item in result:
+            print (f'\r\n\tSnowballing {item[0]} = {item[1]}')
+    
 
     result = cur.execute("SELECT reference, citations, title FROM snowballing").fetchall()
+    print ('\r\n\tReferences\tCitiation\tTitle')
     for paper in result:
         print (f"\t{paper[0]}\t{paper[1]}\t{paper[2]}")
     
