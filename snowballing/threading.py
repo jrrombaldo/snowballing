@@ -29,11 +29,8 @@ def get_tor_session():
         yield tor_session
 
 
-def snowball_task(paper_id, paper_title, thread_pool, curr_depth, max_depth, direction, use_tor):
+def snowball_task(paper_id, paper_title, direction, use_tor):
     try:
-        if curr_depth == max_depth: return
-        references = None
-
         if use_tor:
             with get_tor_session() as tor_session:
                 references = SemanticScholar(tor_session).snowball(paper_id, paper_title, direction)
@@ -41,10 +38,6 @@ def snowball_task(paper_id, paper_title, thread_pool, curr_depth, max_depth, dir
             threading.current_thread().name = f'{paper_title[:80]:80}'
             references = SemanticScholar().snowball(paper_id, paper_title, direction)
 
-        # if references:
-        #     for paper_tuple in references:
-        #         thread_pool.apply_async(snowball_task, (paper_tuple[0], paper_tuple[1], thread_pool, curr_depth+1, max_depth, direction, use_tor))
-        # return
 
     except Exception:
         log.error(f"something went wrong with paper_id {paper_id} and title {paper_title}, resulting at following error:\n{traceback.format_exc()}")
@@ -70,22 +63,24 @@ def lookup_bibliography_metadata(ris_papers, num_threads, use_tor):
             thread_pool.apply_async(
                 search_paper_task, (paper, use_tor, )
             )
-            # .get(timeout=config['threadpool_thread_timeout'])
         
         thread_pool.close()
         thread_pool.join()
 
 def snowball_papers(num_threads, use_tor, direction, depth):
     with ThreadPool(num_threads) as thread_pool:
-        # performing snowballing ....
-        for paper_tuple in SemanticScholar().get_references_and_citations_from_extracted_papers(direction):
-            thread_pool.apply_async(
-                snowball_task, (paper_tuple[0], paper_tuple[1], thread_pool, 0, depth, direction, use_tor,)
-            )
-            # .get(timeout=config['threadpool_thread_timeout'])
 
-        thread_pool.close()
-        thread_pool.join()
+        for iter in range (0, depth):
+            
+            papers = SemanticScholar().get_references_and_citations_from_extracted_papers(direction)
+            log.info(f'performing snowballing iteraction {iter} of {depth} on direction {direction}. Papers found {len(papers)}')
+
+            for paper_tuple in papers:
+                thread_pool.apply_async(
+                    snowball_task, (paper_tuple[0], paper_tuple[1], direction, use_tor,)
+                )
+            thread_pool.close()
+            thread_pool.join()
 
 
 
