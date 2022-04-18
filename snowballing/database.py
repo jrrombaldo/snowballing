@@ -10,8 +10,9 @@ def prepare_db():
     conn = sqlite3.connect(config["db_file"])
     if not db_existed:
         with open('./tables.sql') as tables:
-            conn.cursor().execute(tables.read())
-            conn.commit()
+            for sql_cmd in tables.read().split(";"):
+                conn.cursor().execute(sql_cmd)
+                conn.commit()
 
     return conn
 
@@ -67,3 +68,32 @@ def get_all_papers():
     conn.close()
     return results
 
+def get_summary():
+    conn =  prepare_db()
+
+    cur = conn.cursor()
+    result = cur.execute('SELECT sum(reference) AS total_references, sum(citations) as total_citations FROM snowballing').fetchone()
+    total_references = result[0]
+    total_citations = result[1]
+
+    result = cur.execute("SELECT stat, count (*) FROM papers WHERE source ='SB' GROUP BY stat ORDER BY 1").fetchall()
+    snowballing_found = result[0][1]
+    snowballing_not_found = result[1][1]
+
+    result = cur.execute("SELECT stat, count (*) FROM papers WHERE source ='RIS' GROUP BY stat ORDER BY 1").fetchall()
+    ris_found = result[0][1]
+    ris_not_found = result[1][1]
+
+    log.info(f"\
+            \r\n\tpaper found \t\t= {ris_found}\
+            \r\n\tpapers NOT found \t= {ris_not_found} \
+            \r\n\treferences \t\t= {total_references}\
+            \r\n\tcitations \t\t= {total_citations}\
+            \r\n\tsnowballing found \t= {snowballing_found}\
+            \r\n\tsnowballing NOT found \t= {snowballing_not_found}\r\n")
+
+    result = cur.execute("SELECT reference, citations, title FROM snowballing").fetchall()
+    for paper in result:
+        print (f"\t{paper[0]}\t{paper[1]}\t{paper[2]}")
+    
+    

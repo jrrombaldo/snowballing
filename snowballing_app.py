@@ -4,14 +4,15 @@ import os
 
 from snowballing.logging import log
 from snowballing.config import config
-from snowballing import threading
-
-
+from snowballing import database, threading
 
 def parse_cli_args():
     parser = argparse.ArgumentParser(
         description=' Snowballing and metadata searcing...',
         epilog='happy research! :)')
+
+
+    # TODO papers lookup, snowballing, summary
 
     parser.add_argument('--direction', 
         metavar='<snowballing approach>',
@@ -60,8 +61,6 @@ def get_papers_from_ris(ris_file):
 if __name__ == "__main__":
     args = parse_cli_args()
 
-    if not os.path.exists(config['results_dir']): os.makedirs(config['results_dir'])
-
     log.info(f"starting execution with:\n \t{args.threads} threads\n \tfile \
         {args.ris_file.name}\n \t{'using' if args.tor else 'not'} \
             tor networks\n \tdepth of {args.depth}\n \tsnowball direction of {args.direction}\t")
@@ -75,4 +74,4 @@ if __name__ == "__main__":
     threading.snowball_papers(args.threads, args.tor, args.direction, args.depth)
 
 
-    # TODO, bring error function to this class, so it encorporates papers from threads that could not establish a cirtuit.
+    # database.get_summary()

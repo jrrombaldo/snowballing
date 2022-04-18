@@ -135,8 +135,8 @@ class SemanticScholar(object):
                 else:
                     database.save_paper_details_not_found(ris_paper.get("primary_title"), 'RIS', ris_paper)
         except:
-            self._write_error_result(ris_paper.get("primary_title"), None, f'When searching for: \n[{ris_paper}] \n encountered the following error:\n\n{traceback.format_exc()}')
-
+            log.error(f'something went wrong when searching for: \n[{ris_paper}] \n encountered the following error:\n\n{traceback.format_exc()}')
+    
     def _get_references_and_citations_from_paper(self, paper_detail, direction):
         where_to_look = []
         if direction == 'both' or 'forward': where_to_look.append('citations')
@@ -146,7 +146,7 @@ class SemanticScholar(object):
         for look_at in where_to_look:
             for ref in paper_detail.get(look_at):
                 if not ref.get('paperId'): 
-                    self._write_notfound_result(f"[REFERENCES]\t{ref.get('title')}")
+                    database.save_paper_not_found_from_snowballing(ref.get('title'))
                 else:
                     papers_to_snowball.append((ref.get('paperId'),ref.get('title') ))
         return papers_to_snowball
@@ -182,7 +182,7 @@ class SemanticScholar(object):
                 database.save_paper_details_not_found(paper_title, 'SB', None, paper_id)
                 return
         except:
-            self._write_error_result(f'paperid = [{paper_id}], title = [{paper_title}]', None, f'encountered the following error on snowballing:\n\n{traceback.format_exc()}')
+            log.error(f'encountered the following error on snowballing [{paper_id}], [{paper_title}]:\n\n{traceback.format_exc()}')
 
     def _extract_author_name_from_fullname(self, author):
         if ", " in author:
@@ -193,25 +193,25 @@ class SemanticScholar(object):
     def _extract_authors_surname_from_ris_authors(self, authors):
         return [self._extract_author_name_from_fullname(author) for author in authors]
 
-    def _write_notfound_result(self, paper_title):
-        with open(f"{config['results_dir']}{os.sep}{config['result_not_found_file']}", "a") as file:
-            file.write(f"{paper_title.strip()}")
-            file.close()
+    # def _write_notfound_result(self, paper_title):
+    #     with open(f"{config['results_dir']}{os.sep}{config['result_not_found_file']}", "a") as file:
+    #         file.write(f"{paper_title.strip()}")
+    #         file.close()
     
-    def _write_error_result(self, paper_title, code = None, message = None):
-        with open(f"{config['results_dir']}{os.sep}{config['result_error_file']}", "a") as file:
-            file.write(f"{paper_title} - {code if code else ''} - {message if message else ''}")
-            file.write('\r\n'*5)
-            file.close()
+    # def _write_error_result(self, paper_title, code = None, message = None):
+    #     with open(f"{config['results_dir']}{os.sep}{config['result_error_file']}", "a") as file:
+    #         file.write(f"{paper_title} - {code if code else ''} - {message if message else ''}")
+    #         file.write('\r\n'*5)
+    #         file.close()
 
-    def _write_found_result(self, paper_title, paper_details_json):
-        with open(f"{config['results_dir']}{os.sep}{paper_title.lower()}.json", "a") as file:
-            file.write(json.dumps(paper_details_json, indent=4, sort_keys=True))
-            file.close()
+    # def _write_found_result(self, paper_title, paper_details_json):
+    #     with open(f"{config['results_dir']}{os.sep}{paper_title.lower()}.json", "a") as file:
+    #         file.write(json.dumps(paper_details_json, indent=4, sort_keys=True))
+    #         file.close()
 
-    def parse_extracted_papers_into_ris(self):
-        for paper_file in os.listdir(config['results_dir']):
-            if paper_file.endswith(".json"):
-                with open(os.path.join(config['results_dir'],paper_file)) as json_paper:
-                    # TODO implement this ...
-                    print ('not there yet')
+    # def parse_extracted_papers_into_ris(self):
+    #     for paper_file in os.listdir(config['results_dir']):
+    #         if paper_file.endswith(".json"):
+    #             with open(os.path.join(config['results_dir'],paper_file)) as json_paper:
+    #                 # TODO implement this ...
+    #                 print ('not there yet')
