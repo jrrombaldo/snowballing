@@ -137,33 +137,32 @@ class SemanticScholar(object):
         except:
             log.error(f'something went wrong when searching for: \n[{ris_paper}] \n encountered the following error:\n\n{traceback.format_exc()}')
     
-    def _get_references_and_citations_from_paper(self, paper_detail, direction):
-        where_to_look = []
-        if direction == 'both' or 'forward': where_to_look.append('citations')
-        if direction == 'both' or 'forward': where_to_look.append('references') 
+    # def _get_references_and_citations_from_paper(self, paper_detail, direction):
+    # #     where_to_look = []
+    # #     if direction == 'both' or 'forward': where_to_look.append('citations')
+    # #     if direction == 'both' or 'forward': where_to_look.append('references') 
         
-        papers_to_snowball = []
-        for look_at in where_to_look:
-            for ref in paper_detail.get(look_at):
-                if not ref.get('paperId'): 
-                    database.save_paper_not_found_from_snowballing(ref.get('title'))
-                else:
-                    papers_to_snowball.append((ref.get('paperId'),ref.get('title') ))
-        return papers_to_snowball
+    # #     papers_to_snowball = []
+    # #     for look_at in where_to_look:
+    # #         for ref in paper_detail.get(look_at):
+    # #             if not ref.get('paperId'): 
+    # #                 database.save_paper_not_found_from_snowballing(ref.get('title'))
+    # #             else:
+    # #                 papers_to_snowball.append((ref.get('paperId'),ref.get('title') ))
+    # #     return papers_to_snowball
 
     def get_references_and_citations_from_extracted_papers(self, direction):
-        papers_snowball = []
-        for paper in database.get_all_papers():
-            if paper:
-                papers_snowball.extend(self._get_references_and_citations_from_paper(paper, direction))
-        return papers_snowball
+    #     papers_snowball = []
+    #     for paper in database.get_all_papers():
+    #         if paper:
+    #             papers_snowball.extend(self._get_references_and_citations_from_paper(paper, direction))
+    #     return papers_snowball
+        return database.get_next_snowball_set()
     
 
     def snowball(self, paper_id, paper_title, direction):
-        # log.debug(f'snowballing for {paper_id}, {paper_title}, direction = {direction}')
         try:
             if paper_id == None:
-                # self._write_notfound_result(f'[SNOWBALLING]\t{paper_title}')
                 database.save_paper_not_found_from_snowballing(paper_title)
                 return
 
@@ -175,12 +174,10 @@ class SemanticScholar(object):
 
             if  paper_detail:
                 database.save_paper(paper_id, paper_title, None, paper_detail, 'SB', 'FOUND')
-                references = self._get_references_and_citations_from_paper(paper_detail, direction)
-                log.debug(f'[SNOWBALLING] found {len(references)} references for {paper_title}, {paper_id}')
-                return references
             else:
                 database.save_paper_details_not_found(paper_title, 'SB', None, paper_id)
-                return
+
+            log.debug(f"[SNOWBALLING] {'FOUND' if paper_detail else 'NOT FOUND'} {paper_title}, {paper_id}")
         except:
             log.error(f'encountered the following error on snowballing [{paper_id}], [{paper_title}]:\n\n{traceback.format_exc()}')
 

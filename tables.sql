@@ -17,6 +17,15 @@ WHERE stat = 'FOUND'
   AND source = 'RIS';
 
 
--- FOUND means it was able to find a match on semantic scholar given the RIS paper
--- NOT_FOUND - opposite of above
--- DETAILS_NOT_FOUND - it was able to  find the paper, but could not get its details (this should not happen)
+CREATE VIEW snowballing_round AS
+SELECT
+    json_extract(value, '$.paperId') AS id,
+    json_extract(value, '$.title') AS title
+FROM (
+    SELECT value FROM papers, json_each(papers.paper, '$.citations')
+    UNION ALL
+    SELECT value FROM papers, json_each(papers.paper, '$.references')
+     )
+WHERE
+    id IS NOT NULL
+    AND id NOT IN (SELECT id FROM papers WHERE stat = 'FOUND');

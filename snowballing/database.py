@@ -68,9 +68,16 @@ def get_all_papers():
     conn.close()
     return results
 
+def get_next_snowball_set():
+    conn =  prepare_db()
+    cur = conn.cursor()
+    result = cur.execute('SELECT id, title FROM snowballing_round').fetchall()
+    conn.close()
+    return result
+
+
 def get_summary():
     conn =  prepare_db()
-
     cur = conn.cursor()
     result = cur.execute('SELECT sum(reference) AS total_references, sum(citations) as total_citations FROM snowballing').fetchone()
     total_references = result[0]
@@ -95,5 +102,4 @@ def get_summary():
     result = cur.execute("SELECT reference, citations, title FROM snowballing").fetchall()
     for paper in result:
         print (f"\t{paper[0]}\t{paper[1]}\t{paper[2]}")
-    
     
