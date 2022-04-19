@@ -108,22 +108,22 @@ class SemanticScholar(object):
       
     def search_scholar_by_ris_paper(self, ris_paper):
         paper_id = paper_detail = None
-        try:
-            paper_id = self._search_paper_from_scholar_API(ris_paper)
-            if not paper_id:
-                paper_id = self._search_paper_from_scholar_website(ris_paper)
+        # try:
+        paper_id = self._search_paper_from_scholar_API(ris_paper)
+        if not paper_id:
+            paper_id = self._search_paper_from_scholar_website(ris_paper)
 
-            if not paper_id:
-                database.save_paper_not_found_from_ris(ris_paper)
-                #  self._write_notfound_result(f'[SEARCH_API]\t{ris_paper.get("primary_title")}')
+        if not paper_id:
+            database.save_paper_not_found_from_ris(ris_paper)
+            #  self._write_notfound_result(f'[SEARCH_API]\t{ris_paper.get("primary_title")}')
+        else:
+            paper_detail = self._extract_paper_details(paper_id, ris_paper.get("primary_title"))
+            if paper_detail:
+                database.save_paper(paper_id,ris_paper.get("primary_title"), ris_paper, paper_detail, 'RIS', 'FOUND')
             else:
-                paper_detail = self._extract_paper_details(paper_id, ris_paper.get("primary_title"))
-                if paper_detail:
-                    database.save_paper(paper_id,ris_paper.get("primary_title"), ris_paper, paper_detail, 'RIS', 'FOUND')
-                else:
-                    database.save_paper_details_not_found(ris_paper.get("primary_title"), 'RIS', ris_paper)
-        except:
-            log.error(f'something went wrong when searching for: \n[{ris_paper}] \n encountered the following error:\n\n{traceback.format_exc()}')
+                database.save_paper_details_not_found(ris_paper.get("primary_title"), 'RIS', ris_paper)
+        # except:
+        #     log.error(f'something went wrong when searching for: \n[{ris_paper}] \n encountered the following error:\n\n{traceback.format_exc()}')
     
 
     def get_papers_for_snowballing(self, direction):
@@ -131,25 +131,25 @@ class SemanticScholar(object):
     
 
     def snowballing(self, paper_id, paper_title):
-        try:
-            if paper_id == None:
-                database.save_paper_not_found_from_snowballing(paper_title)
-                return
+        # try:
+        if paper_id == None:
+            database.save_paper_not_found_from_snowballing(paper_title)
+            return
 
-            if database.already_exist(paper_id):
-                log.debug(f'[SNOWBALLING] already extracted -> {paper_id}, {paper_title}')
-                return
+        if database.already_exist(paper_id):
+            log.debug(f'[SNOWBALLING] already extracted -> {paper_id}, {paper_title}')
+            return
 
-            paper_detail = self._extract_paper_details(paper_id, paper_title)
+        paper_detail = self._extract_paper_details(paper_id, paper_title)
 
-            if  paper_detail:
-                database.save_paper(paper_id, paper_title, None, paper_detail, 'SB', 'FOUND')
-            else:
-                database.save_paper_details_not_found(paper_title, 'SB', None, paper_id)
+        if  paper_detail:
+            database.save_paper(paper_id, paper_title, None, paper_detail, 'SB', 'FOUND')
+        else:
+            database.save_paper_details_not_found(paper_title, 'SB', None, paper_id)
 
-            log.debug(f"[SNOWBALLING] {'FOUND' if paper_detail else 'NOT FOUND'} {paper_title}, {paper_id}")
-        except:
-            log.error(f'encountered the following error on snowballing [{paper_id}], [{paper_title}]:\n\n{traceback.format_exc()}')
+        log.debug(f"[SNOWBALLING] {'FOUND' if paper_detail else 'NOT FOUND'} {paper_title}, {paper_id}")
+        # except:
+        #     log.error(f'encountered the following error on snowballing [{paper_id}], [{paper_title}]:\n\n{traceback.format_exc()}')
 
     def _extract_author_name_from_fullname(self, author):
         if ", " in author:

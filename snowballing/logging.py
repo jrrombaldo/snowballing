@@ -14,3 +14,6 @@ log.addHandler(logging.FileHandler(config["logging"]["log-file"]))
 
 for log_handler in log.handlers:
     log_handler.setFormatter(logging.Formatter(config["logging"]["format"]))
+
+
+log.propagate = False
