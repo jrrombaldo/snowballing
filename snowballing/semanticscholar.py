@@ -4,9 +4,6 @@ from snowballing import database
 from retry import retry
 import requests
 import torpy
-import os
-import json
-import traceback
 
 
 class Non200HTTPStatusCode(Exception):

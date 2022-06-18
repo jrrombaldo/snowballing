@@ -71,7 +71,7 @@ failed = 0
 def update_progress_bar(test=None):
     global completed
     completed += 1
-    printProgressBar(completed, total, prefix = 'Progress:', suffix = f'Complete ({completed}/{total}), Failed={failed}', length = 80)
+    printProgressBar(completed, total, prefix = 'Progress:', suffix = f'Complete ({completed}/{total}), Failed={failed}', length = 50)
     
 def update_progress_bar_failed():
     global failed
